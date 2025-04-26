@@ -9,11 +9,8 @@ import java.util.Date;
 @Setter
 public class ReviewResponse {
 
-    private Integer courseId;
     private String courseName;
-    private Integer userId;
-    private String username;
     private Float ratingScore;
-    private String comment;
-    private Date date;
+    private String offerName;
+    private Integer numberOfRegisters;
 }

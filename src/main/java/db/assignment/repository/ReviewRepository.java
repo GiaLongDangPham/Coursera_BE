@@ -14,9 +14,11 @@ public class ReviewRepository {
     @PersistenceContext
     private EntityManager entityManager;
 
-    public List<ReviewResponse> getTopRatedReviews(Float minRating) {
+    public List<ReviewResponse> getTopRatedReviews(String subjectKeyword, String courseKeyword, Float minRating) {
         List<Object[]> result = entityManager
-                .createNativeQuery("EXEC sp_GetTopRatedCourseReviews :minRating")
+                .createNativeQuery("EXEC sp_GetTopRatedCoursesWithFilter :subjectKeyword, :courseKeyword, :minRating")
+                .setParameter("subjectKeyword", subjectKeyword)
+                .setParameter("courseKeyword", courseKeyword)
                 .setParameter("minRating", minRating)
                 .getResultList();
 
@@ -24,13 +26,10 @@ public class ReviewRepository {
         for (Object[] row : result) {
             // Map kết quả từ SQL trực tiếp vào ReviewResponse mà không cần kiểm tra kiểu dữ liệu quá nhiều
             ReviewResponse dto = new ReviewResponse();
-            dto.setCourseId((Integer) row[0]);
-            dto.setCourseName((String) row[1]);
-            dto.setUserId((Integer) row[2]);
-            dto.setUsername((String) row[3]);
-            dto.setRatingScore(((Number) row[4]).floatValue()); // Sử dụng Number để lấy giá trị float từ BigDecimal hoặc Double
-            dto.setComment((String) row[5]);
-            dto.setDate((java.sql.Timestamp) row[6]); // Trực tiếp chuyển về Timestamp, sau đó Java sẽ tự chuyển thành Date nếu cần
+            dto.setCourseName((String) row[0]); // CourseName
+            dto.setRatingScore(((Number) row[1]).floatValue()); // AvgRating
+            dto.setOfferName((String) row[2]); // OfferedBy
+            dto.setNumberOfRegisters(((Number) row[3]).intValue()); // NumCompletedOrders
             reviews.add(dto);
         }
         return reviews;

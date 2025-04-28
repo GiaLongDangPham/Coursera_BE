@@ -22,13 +22,13 @@ Manage users with full CRUD operations, search, validation and paging.
 Client-side validation, search by name, and sortable columns.
 ![Validation, Search, Sorting](src/main/resources/templates/assets/validate_search_sort.png)
 
-#### 📝 Review Interface
-View and manage reviews from users about their courses.
-![Review Management](src/main/resources/templates/assets/review.png)
+#### 📝 Course Interface
+View and manage courses from users.
+![Review Management](src/main/resources/templates/assets/all_courses.png)
 
-#### 🔍 Filter and Search Reviews
+#### 🔍 Filter, Search and Sort Courses
 Filter and search course reviews based on course name, user, or rating.
-![Filter and Search Reviews](src/main/resources/templates/assets/filter_review.png)
+![Filter and Search Reviews](src/main/resources/templates/assets/course_features.png)
 
 #### 🔐 Basic Login Page
 Simple login screen with hardcoded credentials for demonstration.

@@ -13,14 +13,9 @@ public enum ErrorCode {
     EMAIL_INVALID(400, "Invalid email format"),
     PASSWORD_TOO_SHORT(400, "Password must be at least 8 characters long"),
     USER_TOO_YOUNG(400, "User must be at least 13 years old"),
-    USER_HAS_ROLES(400, "Cannot delete user: user has assigned roles. Remove roles first."),
-    USER_HAS_ADDRESSES(400, "Cannot delete user: user has associated addresses. Remove addresses first."),
-    USER_HAS_REVIEWS(400, "Cannot delete user: user has course reviews. Remove reviews first."),
-    USER_HAS_LEARNING_RECORDS(400, "Cannot delete user: user has learning records. Remove them first."),
-    USER_HAS_FOLLOWS(400, "Cannot delete user: user has follow relationships. Remove follow records first."),
-    USER_HAS_OFFERED_COURSES(400, "Cannot delete user: user has offered courses. Remove course offerings first."),
-    USER_HAS_ORDERS(400, "Cannot delete user: user has existing orders. Remove orders first."),
-    USER_HAS_CERTIFICATES(400, "Cannot delete user: user has obtained certificates. Remove certificates first."),
+
+    USER_HAS_OFFER(400, "Cannot delete user. User has offered courses. Use force = 1 to delete anyway."),
+    USER_HAS_ORDER(400, "Cannot delete user. User has orders. Use force = 1 to delete anyway."),
 
     UNAUTHENTICATED(400, "Username or Password is incorrect"),
     DATABASE_ERROR(500, "Unexpected database error"),

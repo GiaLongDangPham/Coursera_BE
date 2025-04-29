@@ -35,6 +35,9 @@ public class UserService {
         query.registerStoredProcedureParameter("Username", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("Password", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("Phone_number", String.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("Address1", String.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("Address2", String.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("Address3", String.class, ParameterMode.IN);
 
         // Thiết lập giá trị parameters
         query.setParameter("id", dto.getId());
@@ -45,6 +48,9 @@ public class UserService {
         query.setParameter("Username", dto.getUsername());
         query.setParameter("Password", dto.getPassword());
         query.setParameter("Phone_number", dto.getPhoneNumber());
+        query.setParameter("Address1", dto.getAddress1());
+        query.setParameter("Address2", dto.getAddress2());
+        query.setParameter("Address3", dto.getAddress3());
 
         try {
             query.execute();
@@ -90,8 +96,11 @@ public class UserService {
         query.registerStoredProcedureParameter("Username", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("Password", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("Phone_number", String.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("Address1", String.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("Address2", String.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("Address3", String.class, ParameterMode.IN);
 
-        // Thiết lập giá trị (cho phép null nếu không cần sửa)
+        // Thiết lập giá trị parameters
         query.setParameter("id", dto.getId());
         query.setParameter("Email", dto.getEmail());
         query.setParameter("FName", dto.getFName());
@@ -100,6 +109,9 @@ public class UserService {
         query.setParameter("Username", dto.getUsername());
         query.setParameter("Password", dto.getPassword());
         query.setParameter("Phone_number", dto.getPhoneNumber());
+        query.setParameter("Address1", dto.getAddress1());
+        query.setParameter("Address2", dto.getAddress2());
+        query.setParameter("Address3", dto.getAddress3());
 
         try {
             query.execute();
@@ -124,37 +136,26 @@ public class UserService {
     }
 
     @Transactional
-    public void deleteUserViaSP(Integer id) throws AppException {
+    public void deleteUserViaSP(Integer id, boolean force) throws AppException {
         if(id == null) throw new AppException(ErrorCode.USER_ID_NULL);
         StoredProcedureQuery query = entityManager.createStoredProcedureQuery("sp_DeleteUser");
-
         query.registerStoredProcedureParameter("id", Integer.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("ForceDelete", Boolean.class, ParameterMode.IN);
+
         query.setParameter("id", id);
+        query.setParameter("ForceDelete", force);
 
         try {
             query.execute();
         } catch (PersistenceException e) {
             String message = e.getMessage();
 
-            // Mapping lỗi cụ thể từ RAISERROR trong SP
             if (message.contains("does not exist")) {
                 throw new AppException(ErrorCode.USER_ID_NOT_EXISTED);
-            } else if (message.contains("assigned roles")) {
-                throw new AppException(ErrorCode.USER_HAS_ROLES);
-            } else if (message.contains("address records")) {
-                throw new AppException(ErrorCode.USER_HAS_ADDRESSES);
-            } else if (message.contains("course reviews")) {
-                throw new AppException(ErrorCode.USER_HAS_REVIEWS);
-            } else if (message.contains("learning records")) {
-                throw new AppException(ErrorCode.USER_HAS_LEARNING_RECORDS);
-            } else if (message.contains("follow relationships")) {
-                throw new AppException(ErrorCode.USER_HAS_FOLLOWS);
-            } else if (message.contains("offered courses")) {
-                throw new AppException(ErrorCode.USER_HAS_OFFERED_COURSES);
-            } else if (message.contains("orders")) {
-                throw new AppException(ErrorCode.USER_HAS_ORDERS);
-            } else if (message.contains("certificates")) {
-                throw new AppException(ErrorCode.USER_HAS_CERTIFICATES);
+            } else if (message.contains("User has offered courses")) {
+                throw new AppException(ErrorCode.USER_HAS_OFFER);
+            } else if (message.contains("User has orders")) {
+                throw new AppException(ErrorCode.USER_HAS_ORDER);
             } else {
                 throw new AppException(ErrorCode.DATABASE_ERROR);
             }

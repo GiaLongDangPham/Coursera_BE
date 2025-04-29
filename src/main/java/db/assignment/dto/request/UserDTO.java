@@ -29,4 +29,10 @@ public class UserDTO {
 
     @JsonProperty("phone")
     private String phoneNumber;
+
+    private String address1;
+
+    private String address2;
+
+    private String address3;
 }

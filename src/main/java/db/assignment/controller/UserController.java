@@ -48,8 +48,9 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseData<?> deleteUser(@PathVariable Integer id) {
-        userService.deleteUserViaSP(id);
+    public ResponseData<?> deleteUser(@PathVariable Integer id,
+                                      @RequestParam(defaultValue = "false") boolean force) {
+        userService.deleteUserViaSP(id, force);
         return ResponseData.builder()
                 .code(HttpStatus.ACCEPTED.value())
                 .message("Delete user successfully")

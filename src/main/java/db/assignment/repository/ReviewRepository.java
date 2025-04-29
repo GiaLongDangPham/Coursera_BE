@@ -30,6 +30,8 @@ public class ReviewRepository {
             dto.setRatingScore(((Number) row[1]).floatValue()); // AvgRating
             dto.setOfferName((String) row[2]); // OfferedBy
             dto.setNumberOfRegisters(((Number) row[3]).intValue()); // NumCompletedOrders
+            dto.setFee(((Number) row[4]).intValue());
+            dto.setReviewCount(((Number) row[5]).intValue());
             reviews.add(dto);
         }
         return reviews;

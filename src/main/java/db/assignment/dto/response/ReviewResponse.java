@@ -13,4 +13,6 @@ public class ReviewResponse {
     private Float ratingScore;
     private String offerName;
     private Integer numberOfRegisters;
+    private Integer fee;
+    private Integer reviewCount;
 }

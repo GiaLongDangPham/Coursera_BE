@@ -33,6 +33,10 @@ CREATE TABLE user_address (
     FOREIGN KEY (User_id) REFERENCES [User](id)
 );
 GO
+-- Bảng user_address - Phụ thuộc mạnh vào User
+ALTER TABLE user_address
+ADD CONSTRAINT FK_UserAddress_User 
+FOREIGN KEY (User_id) REFERENCES [User](id) ON DELETE CASCADE;
 
 -- Bảng role
 CREATE TABLE [role] (
@@ -59,6 +63,10 @@ CREATE TABLE has_role (
     FOREIGN KEY (Role_id) REFERENCES [role](id)
 );
 GO
+-- Bảng has_role - Phụ thuộc mạnh vào User
+ALTER TABLE has_role
+ADD CONSTRAINT FK_HasRole_User 
+FOREIGN KEY (User_id) REFERENCES [User](id) ON DELETE CASCADE;
 
 -- Bảng has_permission
 CREATE TABLE has_permission (
@@ -77,6 +85,9 @@ CREATE TABLE Subject (
     SDescription NVARCHAR(MAX)
 );
 GO
+ALTER TABLE Subject
+ADD CONSTRAINT UQ_SName UNIQUE (SName);
+GO
 
 -- Bảng Course
 CREATE TABLE Course (
@@ -88,6 +99,9 @@ CREATE TABLE Course (
     Enrollment_count INT DEFAULT 0,
     Rating DECIMAL(3,1) DEFAULT 0.0,
 );
+GO
+ALTER TABLE Course
+ADD CONSTRAINT UQ_CName UNIQUE (CName);
 GO
 
 -- Bảng review_course
@@ -102,6 +116,11 @@ CREATE TABLE review_course (
     FOREIGN KEY (Course_id) REFERENCES Course(id)
 );
 GO
+-- Bảng review_course - Phụ thuộc vừa phải, nhưng có thể cân nhắc CASCADE
+-- Xóa ràng buộc FK hiện tại
+ALTER TABLE review_course
+ADD CONSTRAINT FK_ReviewCourse_User 
+FOREIGN KEY (User_id) REFERENCES [User](id) ON DELETE CASCADE;
 
 -- Bảng has_course (kết nối Course và Subject)
 CREATE TABLE has_course (
@@ -161,6 +180,10 @@ CREATE TABLE Learn (
     FOREIGN KEY (Course_id, Chapter_id, Lesson_id) REFERENCES Lesson(Course_id, Chapter_id, Lesson_id)
 );
 GO
+-- Bảng Learn - Phụ thuộc mạnh vào User
+ALTER TABLE Learn
+ADD CONSTRAINT FK_Learn_User 
+FOREIGN KEY (User_id) REFERENCES [User](id) ON DELETE CASCADE;
 
 -- Bảng Assignment (bài tập lớn)
 CREATE TABLE Assignment (
@@ -259,6 +282,10 @@ CREATE TABLE obtain_certificate (
     FOREIGN KEY (User_id) REFERENCES [User](id)
 );
 GO
+-- Bảng obtain_certificate - Phụ thuộc vừa phải, có thể cân nhắc CASCADE
+ALTER TABLE obtain_certificate
+ADD CONSTRAINT FK_ObtainCertificate_User 
+FOREIGN KEY (User_id) REFERENCES [User](id) ON DELETE CASCADE;
 
 -- Bảng Coupon
 CREATE TABLE Coupon (
@@ -281,12 +308,11 @@ CREATE TABLE [Order] (
     User_id INT NOT NULL,
     Ord_status NVARCHAR(20) NOT NULL CHECK (Ord_status IN ('Pending', 'Completed', 'Cancelled', 'Refunded')),
     Ord_date DATETIME NOT NULL DEFAULT GETDATE(),
-    Total_fee INT NOT NULL,
+    Total_fee INT,
     Certificate_url NVARCHAR(MAX),
     FOREIGN KEY (User_id) REFERENCES [User](id)
 );
 GO
-
 -- Bảng use_coupon (quan hệ giữa Order và Coupon)
 CREATE TABLE use_coupon (
     Coupon_id INT NOT NULL,
@@ -318,7 +344,7 @@ CREATE TABLE Order_receipt (
 GO
 
 -- 1. Người dùng phải đủ 13 tuổi
-CREATE TRIGGER trg_check_min_age_13
+CREATE OR ALTER TRIGGER trg_check_min_age_13
 ON [user]
 INSTEAD OF INSERT, UPDATE
 AS
@@ -329,7 +355,7 @@ BEGIN
     IF EXISTS (
         SELECT 1
         FROM inserted
-        WHERE DATEDIFF(YEAR, date_of_birth, GETDATE()) < 13
+        WHERE DATEADD(YEAR, 13, date_of_birth) > GETDATE()
     )
     BEGIN
         RAISERROR ('Người dùng phải đủ 13 tuổi trở lên.', 16, 1);
@@ -369,7 +395,7 @@ GO
 -- Thử insert sai
 INSERT INTO [User] (id, Email, FName, LName, Date_of_birth, Username, Password, Phone_number)
 VALUES
- (999,'xxx@example.com','x','x','2020-05-15','x','Password123!','0123456789')
+ (9999,'xxx@example.com','x','x','2020-05-15','x','Password123!','0123456789')
 GO
 -- Thử insert sai
 UPDATE [user]
@@ -377,6 +403,7 @@ SET date_of_birth = '2015-05-01'
 WHERE id = 1;
 GO
 
+select * from [user]
 
 -- 2. Password phải có tối thiểu 8 kí tự
 ALTER TABLE [user]
@@ -401,6 +428,7 @@ CHECK (rating >= 0 AND rating <= 5);
 GO
 
 --5 Người dùng chỉ có thể đánh giá khóa học nếu họ đã hoàn thành hơn 50% nội dung.
+--DROP TRIGGER trg_check_review_progress
 CREATE OR ALTER TRIGGER trg_check_review_progress
 ON review_course
 INSTEAD OF INSERT
@@ -555,7 +583,29 @@ VALUES
  (4,'david@example.com','David','Pham','1995-02-10','david95','PassWord789!','0901234567'),
  (5,'eve@example.com','Eve','Hoang','2002-07-25','eve02','EvePass321!','0932123456');
 GO
-
+INSERT INTO [User] (id, Email, FName, LName, Date_of_birth, Username, Password, Phone_number)
+VALUES
+(8, 'hannah@example.com', 'Hannah', 'Nguyen', '1991-04-12', 'hannah91', 'H@nnahPwd!', '0911001100'),
+(9, 'ian@example.com', 'Ian', 'Le', '1994-09-08', 'ian94', 'IanSecure456$', '0911001101'),
+(10, 'julia@example.com', 'Julia', 'Pham', '1989-01-22', 'julia89', 'Juli@1234', '0911001102'),
+(11, 'kevin@example.com', 'Kevin', 'Ho', '1996-06-17', 'kevin96', 'K3vinStrong!', '0911001103'),
+(12, 'lisa@example.com', 'Lisa', 'Tran', '2001-10-30', 'lisa01', 'Lis@Pwd99', '0911001104'),
+(13, 'mike@example.com', 'Mike', 'Vo', '1993-08-13', 'mike93', 'MikeSecure!', '0911001105'),
+(14, 'nina@example.com', 'Nina', 'Bui', '1990-03-25', 'nina90', 'N1naP@ss', '0911001106'),
+(15, 'oliver@example.com', 'Oliver', 'Dang', '1995-12-04', 'oliver95', 'Ol!ver1234', '0911001107'),
+(16, 'paula@example.com', 'Paula', 'Trinh', '1998-05-19', 'paula98', 'PaulaPwd@', '0911001108'),
+(17, 'quang@example.com', 'Quang', 'Mai', '1992-07-01', 'quang92', 'Qu@ngSecure', '0911001109'),
+(18, 'rachel@example.com', 'Rachel', 'Nguyen', '2000-11-11', 'rachel00', 'Rachel_2024!', '0911001110'),
+(19, 'steve@example.com', 'Steve', 'Le', '1988-02-27', 'steve88', 'Stev3Pass', '0911001111'),
+(20, 'tina@example.com', 'Tina', 'Pham', '1997-09-14', 'tina97', 'T!na_789', '0911001112'),
+(21, 'ugo@example.com', 'Ugo', 'Doan', '1999-06-23', 'ugo99', 'UgoPass!23', '0911001113'),
+(22, 'victoria@example.com', 'Victoria', 'Ha', '1990-08-18', 'vic90', 'Vict0r!aPwd', '0911001114'),
+(23, 'will@example.com', 'Will', 'Hoang', '1994-04-03', 'will94', 'W1llStr0ng', '0911001115'),
+(24, 'xuan@example.com', 'Xuan', 'Truong', '1996-12-12', 'xuan96', 'Xu@nSecure', '0911001116'),
+(25, 'yvonne@example.com', 'Yvonne', 'Le', '1993-10-07', 'yvonne93', 'Yv0nnePwd', '0911001117'),
+(26, 'zack@example.com', 'Zack', 'Pham', '2002-01-05', 'zack02', 'Z@ckPass123', '0911001118'),
+(27, 'bao@example.com', 'Bao', 'Nguyen', '1995-03-16', 'bao95', 'Bao_StrongPwd', '0911001119');
+GO
 -- Bảng follow
 INSERT INTO follow (User_id, Follower_id)
 VALUES
@@ -625,6 +675,13 @@ VALUES
  (4,'Art','Courses about fine arts, design, and creativity'),
  (5,'Mathematics','Courses about algebra, calculus, and more');
 GO
+INSERT INTO Subject (id, SName, SDescription)
+VALUES
+(6, 'Web Development', 'Courses about building websites, front-end, and back-end development'),
+(7, 'Machine Learning', 'Courses about AI, neural networks, and deep learning techniques'),
+(8, 'Creative Writing', 'Courses about storytelling, novel writing, and literary analysis'),
+(9, 'Cybersecurity', 'Courses about ethical hacking, network security, and data protection'),
+(10, 'Project Management', 'Courses about managing projects, teams, and timelines');
 
 -- Bảng Course
 INSERT INTO Course (id, CName, CDescription, Outcome_info, Fee, Enrollment_count, Rating)
@@ -640,6 +697,29 @@ VALUES
  (104,'Digital Painting','Learn digital art techniques','Produce digital artwork',80,90,4.6),
  (105,'Calculus I','Fundamentals of differential calculus','Solve derivatives and limits',120,250,4.4);
 GO
+INSERT INTO Course (id, CName, CDescription, Outcome_info, Fee, Enrollment_count, Rating)
+VALUES
+(111, 'Advanced Java Programming', 'Master advanced concepts in Java', 'Build complex applications using Java', 210, 150, 4.2),
+(112, 'Intro to Artificial Intelligence', 'Basics of AI and applications', 'Understand AI principles and simple models', 180, 170, 4.3),
+(113, 'Photography Basics', 'Learn photography techniques', 'Take professional-looking photos', 90, 95, 4.1),
+(114, 'UI/UX Design Fundamentals', 'Design user-friendly interfaces', 'Create wireframes and prototypes', 130, 180, 4.5),
+(115, 'Blockchain Essentials', 'Understand blockchain and cryptocurrencies', 'Build smart contracts and apps', 220, 140, 4.4),
+(116, 'Cloud Computing with AWS', 'Learn to use AWS services', 'Deploy scalable applications on the cloud', 200, 190, 4.6),
+(117, 'Mobile App Development', 'Build apps for Android & iOS', 'Develop and deploy mobile apps', 160, 220, 4.3),
+(118, 'Statistics for Data Science', 'Core statistics concepts for DS', 'Apply statistical analysis in Python', 140, 130, 4.2),
+(119, 'Public Speaking Mastery', 'Boost communication skills', 'Deliver confident presentations', 100, 110, 4.7),
+(120, 'Game Development with Unity', 'Create 2D/3D games in Unity', 'Build interactive games from scratch', 180, 160, 4.5),
+(121, 'Python for Automation', 'Automate tasks using Python', 'Write scripts for real-life workflows', 120, 200, 4.6),
+(122, 'Ethical Hacking Basics', 'Understand how hackers think', 'Defend against common vulnerabilities', 160, 150, 4.3),
+(123, 'Graphic Design with Photoshop', 'Create amazing graphics', 'Use Photoshop tools like a pro', 110, 140, 4.2),
+(124, 'SQL and Databases', 'Work with relational databases', 'Design schemas and write SQL queries', 130, 210, 4.4),
+(125, 'Networking Fundamentals', 'Intro to computer networks', 'Configure basic network setups', 100, 120, 4.1),
+(126, 'Digital Marketing Basics', 'Learn online marketing', 'Run effective ad campaigns', 90, 130, 4.3),
+(127, '3D Modeling with Blender', 'Create 3D assets', 'Model and animate in Blender', 140, 90, 4.2),
+(128, 'English for Professionals', 'Improve formal English skills', 'Write emails, reports, and speak clearly', 80, 160, 4.0),
+(129, 'Agile Project Management', 'Manage projects with Agile/Scrum', 'Use Jira and sprints effectively', 150, 180, 4.4),
+(130, 'Entrepreneurship 101', 'Start your own business', 'Build a startup from idea to launch', 200, 100, 4.5);
+GO
 
 -- Bảng review_course
 INSERT INTO review_course (User_id, Course_id, Comment, Date, Rating_score)
@@ -649,6 +729,94 @@ VALUES
  (3,103,'Good coverage of markets.','2024-03-05',4.2),
  (1,105,'Challenging but rewarding.','2024-04-01',4.4),
  (5,104,'Loved the creative projects.','2024-04-10',4.6);
+GO
+select * from review_course
+select * from Learn
+INSERT INTO review_course (User_id, Course_id, Comment, Date, Rating_score)
+VALUES
+    (8, 109, 'Really enjoyed the hands-on labs!', '2024-05-01', 4.8),
+    (9, 110, 'Clear explanations, but some videos were too long.', '2024-05-03', 4.0),
+    (10, 111, 'Perfect for beginners, highly recommend!', '2024-05-05', 5.0),
+    (11, 112, 'Content was outdated, needs more modern examples.', '2024-05-07', 2.8),
+    (12, 113, 'Well-structured course with great assignments.', '2024-05-10', 4.5),
+    (13, 114, 'Good intro, but I wanted more advanced topics.', '2024-05-12', 3.7),
+    (14, 115, 'Instructor was engaging, but quizzes were too easy.', '2024-05-15', 4.2),
+    (15, 116, 'Very practical, learned a lot!', '2024-05-20', 4.9),
+    (16, 117, 'Some sections were confusing, needs better explanations.', '2024-06-01', 3.5),
+    (17, 118, 'Loved the real-world projects!', '2024-06-05', 4.6),
+    (18, 119, 'Too fast-paced for me, but content was solid.', '2024-06-10', 3.8),
+    (19, 120, 'Not what I expected, too theoretical.', '2024-06-15', 2.5),
+    (20, 121, 'Great course, but I wish it had more examples.', '2024-06-20', 4.0),
+    (21, 122, 'Best course I’ve taken so far!', '2024-07-01', 5.0),
+    (22, 123, 'Very interactive, kept me engaged.', '2024-07-05', 4.7),
+    (23, 124, 'Good, but some topics were rushed.', '2024-07-10', 3.9),
+    (24, 125, 'Excellent course, worth every penny!', '2024-07-15', 4.8),
+    (25, 126, 'Could be better with more practical exercises.', '2024-08-01', 3.6),
+    (26, 127, 'Fantastic instructor, very knowledgeable.', '2024-08-05', 4.9),
+    (27, 128, 'Solid foundation for programming.', '2024-08-10', 4.3),
+    (1, 129, 'Too many videos, needs more quizzes.', '2024-08-15', 3.7),
+    (2, 130, 'Really helped me understand the basics.', '2024-09-01', 4.5),
+    (3, 109, 'Content was great, but pacing was uneven.', '2024-09-05', 4.0),
+    (4, 110, 'Challenging but very rewarding!', '2024-09-10', 4.6),
+    (5, 111, 'Needs more real-world applications.', '2024-09-15', 3.4),
+    (6, 112, 'Disappointing, not enough depth.', '2024-10-01', 2.7),
+    (7, 113, 'Very well-designed course!', '2024-10-05', 4.8),
+    (8, 114, 'Good but could use more interactive elements.', '2024-10-10', 4.1),
+    (9, 115, 'Loved the practical approach!', '2024-11-01', 4.9),
+    (10, 116, 'Okay, but I expected more.', '2024-11-05', 3.5);
+GO
+
+INSERT INTO review_course (User_id, Course_id, Comment, Date, Rating_score)
+VALUES
+    (11, 117, 'Very engaging, but some topics were rushed.', '2024-11-10', 4.0),
+    (12, 118, 'Great practical exercises!', '2024-11-12', 4.7),
+    (13, 119, 'Content was okay, but pacing was uneven.', '2024-11-15', 3.5),
+    (14, 120, 'Loved the instructor’s teaching style!', '2024-11-20', 4.9),
+    (15, 121, 'Needs more real-world examples.', '2024-11-25', 3.2),
+    (16, 122, 'Amazing course, highly recommend!', '2024-12-01', 5.0),
+    (17, 123, 'Good but could use more quizzes.', '2024-12-05', 4.1),
+    (18, 124, 'Too theoretical for my taste.', '2024-12-10', 2.8),
+    (19, 125, 'Well-structured and informative.', '2024-12-15', 4.5),
+    (20, 126, 'Instructor was clear, but content was basic.', '2024-12-20', 3.7),
+    (21, 127, 'Fantastic course for beginners!', '2024-12-25', 4.8),
+    (22, 128, 'Needs more interactive elements.', '2025-01-01', 3.4),
+    (23, 129, 'Really helped me grasp the concepts.', '2025-01-05', 4.6),
+    (24, 130, 'Disappointing, not enough depth.', '2025-01-10', 2.7),
+    (25, 101, 'Very practical and hands-on.', '2025-01-15', 4.9),
+    (26, 102, 'Some videos were too long.', '2025-01-20', 3.8),
+    (27, 103, 'Excellent course, worth it!', '2025-01-25', 4.7),
+    (1, 104, 'Good but pacing was a bit fast.', '2025-02-01', 4.0),
+    (2, 105, 'Loved the real-world applications!', '2025-02-05', 4.8),
+    (3, 106, 'Content was outdated.', '2025-02-10', 2.9),
+    (4, 107, 'Very engaging instructor!', '2025-02-15', 4.6),
+    (5, 108, 'Needs more practical exercises.', '2025-02-20', 3.5),
+    (6, 109, 'Best course I’ve taken!', '2025-02-25', 5.0),
+    (7, 110, 'Okay, but I expected more depth.', '2025-03-01', 3.3),
+    (8, 111, 'Really practical and well-explained.', '2025-03-05', 4.7),
+    (9, 112, 'Too fast-paced for beginners.', '2025-03-10', 3.6),
+    (10, 113, 'Fantastic, learned a lot!', '2025-03-15', 4.9),
+    (11, 114, 'Content was good, but quizzes were too easy.', '2025-03-20', 4.0),
+    (12, 115, 'Not very engaging.', '2025-03-25', 2.8),
+    (13, 116, 'Well-structured, but needs more examples.', '2025-03-30', 4.2),
+    (14, 117, 'Great course for intermediates!', '2025-04-01', 4.8),
+    (15, 118, 'Some sections were confusing.', '2025-04-05', 3.4),
+    (16, 119, 'Loved the hands-on projects!', '2025-04-10', 4.7),
+    (17, 120, 'Too theoretical, needs more practice.', '2025-04-15', 3.0),
+    (18, 121, 'Excellent instructor, very clear.', '2025-04-20', 4.9),
+    (19, 122, 'Good but could be more interactive.', '2025-04-25', 4.1),
+    (20, 123, 'Really helped me understand the material.', '2025-04-30', 4.6),
+    (21, 124, 'Disappointing, not enough practical content.', '2025-05-01', 2.7),
+    (22, 125, 'Very well-designed course!', '2025-05-05', 4.8),
+    (23, 126, 'Okay, but pacing was uneven.', '2025-05-10', 3.5),
+    (24, 127, 'Loved the practical approach!', '2025-05-15', 4.9),
+    (25, 128, 'Needs more real-world applications.', '2025-05-20', 3.3),
+    (26, 129, 'Fantastic course, highly recommend!', '2025-05-25', 5.0),
+    (27, 130, 'Good but could use more quizzes.', '2025-05-30', 4.0),
+    (1, 102, 'Very practical, but some topics were rushed.', '2025-06-01', 4.2),
+    (2, 103, 'Content was outdated, needs updating.', '2025-06-05', 2.9),
+    (3, 105, 'Challenging but rewarding!', '2025-06-10', 4.7),
+    (4, 106, 'Instructor was engaging!', '2025-06-15', 4.5),
+    (5, 107, 'Needs more depth in some areas.', '2025-06-20', 3.6);
 GO
 
 -- Bảng has_course
@@ -660,7 +828,44 @@ VALUES
  (4,104),
  (5,105);
 GO
-
+INSERT INTO has_course (Subject_id, Course_id)
+VALUES
+(1, 106),  -- Subject 1 với Course 106
+(2, 108),  -- Subject 2 với Course 108
+(3, 107),  -- Subject 3 với Course 107
+(4, 110),  -- Subject 4 với Course 110
+(5, 109),  -- Subject 5 với Course 109
+(6, 106),  -- Subject 6 với Course 106
+(6, 107),  -- Subject 6 với Course 107
+(7, 101),  -- Subject 7 với Course 101
+(7, 110),  -- Subject 7 với Course 110
+(8, 108),  -- Subject 8 với Course 108
+(8, 109),  -- Subject 8 với Course 109
+(9, 103),  -- Subject 9 với Course 103
+(9, 105);  -- Subject 9 với Course 105
+INSERT INTO has_course (Subject_id, Course_id)
+VALUES
+(1, 111),  -- Advanced Java Programming → Computer Science
+(1, 124),  -- SQL and Databases → Computer Science
+(2, 112),  -- Intro to AI → Data Science
+(2, 118),  -- Statistics for Data Science → Data Science
+(2, 122),  -- Ethical Hacking Basics → Data Science (kỹ năng liên quan đến dữ liệu)
+(3, 119),  -- Public Speaking Mastery → Business
+(3, 126),  -- Digital Marketing Basics → Business
+(3, 130),  -- Entrepreneurship 101 → Business
+(4, 113),  -- Photography Basics → Art
+(4, 123),  -- Graphic Design with Photoshop → Art
+(4, 127),  -- 3D Modeling with Blender → Art
+(5, 125),  -- Networking Fundamentals → Mathematics (liên quan logic mạng)
+(5, 128),  -- English for Professionals → Mathematics (giao tiếp học thuật)
+(6, 114),  -- UI/UX Design Fundamentals → Web Development
+(6, 116),  -- Cloud Computing with AWS → Web Development
+(6, 117),  -- Mobile App Development → Web Development
+(6, 120),  -- Game Development with Unity → Web Development
+(7, 115),  -- Blockchain Essentials → Machine Learning
+(7, 121),  -- Python for Automation → Machine Learning
+(7, 129);  -- Agile Project Management → Machine Learning / Technical teams
+GO
 -- Bảng Offer
 INSERT INTO Offer (Course_id, User_id)
 VALUES
@@ -670,7 +875,39 @@ VALUES
  (104,4),
  (105,3);
 GO
-
+INSERT INTO Offer (Course_id, User_id)
+VALUES
+ (106, 3),  -- Khóa học 106 được người dùng 3 cung cấp
+ (107, 4),  -- Khóa học 107 được người dùng 4 cung cấp
+ (108, 4),  -- Khóa học 108 được người dùng 4 cung cấp
+ (109, 5),  -- Khóa học 109 được người dùng 5 cung cấp
+ (110, 5)  -- Khóa học 110 được người dùng 5 cung cấp
+GO
+INSERT INTO Offer (Course_id, User_id)
+VALUES
+(111, 6),
+(112, 6),
+(113, 7),
+(114, 8),
+(115, 9),
+(116, 10),
+(117, 11),
+(118, 11),
+(119, 12),
+(120, 13),
+(121, 14),
+(122, 15),
+(123, 15),
+(124, 16),
+(125, 17),
+(126, 18),
+(127, 18),
+(128, 19),
+(129, 20),
+(130, 21)
+GO
+select * from [user]
+select * from Course
 -- Bảng Chapter (5 chương cho Course 101)
 INSERT INTO Chapter (Chapter_id, Course_id, CName, CDescription)
 VALUES
@@ -819,13 +1056,77 @@ GO
 -- Bảng [Order]
 INSERT INTO [Order] (Order_id, User_id, Ord_status, Ord_date, Total_fee, Certificate_url)
 VALUES
+(1006,1,'Completed','2024-05-02',100,'https://orders.example.com/1006'),
+(1007,2,'Completed','2024-06-16',150,NULL),
+(1008,3,'Completed','2024-07-21',200,'https://orders.example.com/1008'),
+(1009,4,'Completed','2024-08-01',80,NULL),
+(1010,5,'Completed','2024-09-06',120,'https://orders.example.com/1010'),
+(1011,6,'Pending','2024-10-10',90,NULL),
+(1012,7,'Cancelled','2024-11-05',0,NULL),
+(1013,5,'Completed','2024-12-20',300,'https://orders.example.com/1013'),
+(1014,6,'Completed','2025-01-14',250,NULL),
+(1015,7,'Completed','2025-02-18',180,'https://orders.example.com/1015'),
+
  (1001,1,'Completed','2024-05-02',100,'https://orders.example.com/1001'),
  (1002,2,'Pending','2024-06-16',150,NULL),
  (1003,3,'Completed','2024-07-21',200,'https://orders.example.com/1003'),
  (1004,4,'Cancelled','2024-08-01',80,NULL),
  (1005,5,'Completed','2024-09-06',120,'https://orders.example.com/1005');
 GO
-
+INSERT INTO [Order] (Order_id, User_id, Ord_status, Ord_date, Total_fee, Certificate_url)
+VALUES
+(1016, 8, 'Completed', '2025-03-01', 130, 'https://orders.example.com/1016'),
+(1017, 9, 'Completed', '2025-03-05', 95, NULL),
+(1018, 10, 'Completed', '2025-03-07', 145, 'https://orders.example.com/1018'),
+(1019, 11, 'Completed', '2025-03-10', 180, NULL),
+(1020, 12, 'Completed', '2025-03-11', 220, 'https://orders.example.com/1020'),
+(1021, 13, 'Completed', '2025-03-12', 105, NULL),
+(1022, 14, 'Completed', '2025-03-13', 170, 'https://orders.example.com/1022'),
+(1023, 15, 'Completed', '2025-03-14', 200, NULL),
+(1024, 16, 'Completed', '2025-03-15', 190, 'https://orders.example.com/1024'),
+(1025, 17, 'Completed', '2025-03-16', 160, NULL),
+(1026, 18, 'Completed', '2025-03-17', 175, 'https://orders.example.com/1026'),
+(1027, 19, 'Completed', '2025-03-18', 150, NULL),
+(1028, 20, 'Completed', '2025-03-19', 135, 'https://orders.example.com/1028'),
+(1029, 21, 'Completed', '2025-03-20', 140, NULL),
+(1030, 22, 'Completed', '2025-03-21', 115, 'https://orders.example.com/1030'),
+(1031, 23, 'Completed', '2025-03-22', 125, NULL),
+(1032, 24, 'Completed', '2025-03-23', 185, 'https://orders.example.com/1032'),
+(1033, 25, 'Completed', '2025-03-24', 195, NULL),
+(1034, 26, 'Completed', '2025-03-25', 210, 'https://orders.example.com/1034'),
+(1035, 27, 'Completed', '2025-03-26', 175, NULL),
+(1036, 1, 'Completed', '2025-03-27', 160, 'https://orders.example.com/1036'),
+(1037, 2, 'Completed', '2025-03-28', 170, NULL),
+(1038, 3, 'Completed', '2025-03-29', 180, 'https://orders.example.com/1038'),
+(1039, 4, 'Completed', '2025-03-30', 190, NULL),
+(1040, 5, 'Completed', '2025-03-31', 200, 'https://orders.example.com/1040'),
+(1041, 6, 'Completed', '2025-04-01', 120, NULL),
+(1042, 7, 'Completed', '2025-04-02', 130, 'https://orders.example.com/1042'),
+(1043, 8, 'Completed', '2025-04-03', 140, NULL),
+(1044, 9, 'Completed', '2025-04-04', 150, 'https://orders.example.com/1044'),
+(1045, 10, 'Completed', '2025-04-05', 160, NULL);
+GO
+-- Thêm các đơn hàng vào bảng [Order]
+INSERT INTO [Order] (Order_id, User_id, Ord_status, Ord_date, Total_fee, Certificate_url)
+VALUES
+(1046, 11, 'Completed', '2025-04-06', 100, 'https://orders.example.com/1046'),
+(1047, 12, 'Completed', '2025-04-07', 110, 'https://orders.example.com/1047'),
+(1048, 13, 'Completed', '2025-04-08', 120, NULL),
+(1049, 14, 'Completed', '2025-04-09', 130, 'https://orders.example.com/1049'),
+(1050, 15, 'Completed', '2025-04-10', 140, NULL),
+(1051, 16, 'Completed', '2025-04-11', 150, 'https://orders.example.com/1051'),
+(1052, 17, 'Completed', '2025-04-12', 160, NULL),
+(1053, 18, 'Completed', '2025-04-13', 170, 'https://orders.example.com/1053'),
+(1054, 19, 'Completed', '2025-04-14', 180, NULL),
+(1055, 20, 'Completed', '2025-04-15', 190, 'https://orders.example.com/1055'),
+(1056, 21, 'Completed', '2025-04-16', 200, NULL),
+(1057, 22, 'Completed', '2025-04-17', 210, 'https://orders.example.com/1057'),
+(1058, 23, 'Completed', '2025-04-18', 220, NULL),
+(1059, 24, 'Completed', '2025-04-19', 230, 'https://orders.example.com/1059'),
+(1060, 25, 'Completed', '2025-04-20', 240, NULL),
+(1061, 26, 'Completed', '2025-04-21', 250, 'https://orders.example.com/1061'),
+(1062, 27, 'Completed', '2025-04-22', 260, NULL);
+GO
 -- Bảng use_coupon
 INSERT INTO use_coupon (Coupon_id, Order_id)
 VALUES
@@ -839,11 +1140,53 @@ GO
 -- Bảng include_course
 INSERT INTO include_course (Order_id, Course_id)
 VALUES
- (1001,101),
- (1002,102),
- (1003,103),
- (1004,104),
- (1005,105);
+ (1001,101),(1002,102),(1003,103),(1004,104),(1005,105),(1001, 106),(1002, 108),
+ (1003, 107),(1003, 109),(1004, 110),(1005, 101),(1006, 106),(1006, 108),(1006, 110),
+ (1007, 107),(1007, 102),(1008, 108),(1008, 109),(1009, 109),(1009, 103),(1010, 110),(1010, 101),(1010, 104);
+INSERT INTO include_course (Order_id, Course_id)
+VALUES
+(1011, 102), (1011, 103),(1012, 104), (1012, 105),(1013, 106), (1013, 107), (1013, 108),(1014, 109), (1014, 110),(1015, 101), (1015, 102), (1015, 103),
+(1016, 104), (1016, 105),(1017, 106), (1017, 108), (1017, 110),(1018, 107), (1018, 109),(1019, 103), (1019, 105),(1020, 101), (1020, 108),
+(1021, 104),(1022, 110), (1022, 106),(1023, 107), (1023, 105), (1023, 103),(1024, 102), (1024, 104),(1025, 101), (1025, 109), (1025, 110),
+(1026, 106),(1027, 103), (1027, 104),(1028, 108), (1028, 105),(1029, 101), (1029, 102), (1029, 107),(1030, 110), (1030, 109),(1031, 104), (1031, 108),
+(1032, 106), (1032, 102), (1032, 101),(1033, 105), (1033, 107),(1034, 103), (1034, 109),(1035, 110), (1035, 104),(1036, 102), (1036, 105),
+(1037, 106), (1037, 101), (1037, 103),(1038, 107), (1038, 108),(1039, 104), (1039, 102),(1040, 105), (1040, 109), (1040, 110),
+(1041, 101),(1042, 103), (1042, 106),(1043, 108), (1043, 104),(1044, 102), (1044, 110),(1045, 105), (1045, 107), (1045, 109);
+GO
+INSERT INTO include_course (Order_id, Course_id)
+VALUES
+-- Order 1045 -> Courses 111, 112, 113
+(1045, 111), (1045, 112), (1045, 113),
+-- Order 1044 -> Courses 114, 115
+(1044, 114), (1044, 115),
+-- Order 1043 -> Courses 116, 117, 118
+(1043, 116), (1043, 117), (1043, 118),
+-- Order 1042 -> Courses 119, 120
+(1042, 119), (1042, 120),
+-- Order 1041 -> Courses 121, 122, 123
+(1041, 121), (1041, 122), (1041, 123),
+-- Order 1040 -> Courses 124, 125
+(1040, 124), (1040, 125),
+-- Order 1039 -> Courses 126, 127, 128
+(1039, 126), (1039, 127), (1039, 128),
+-- Order 1038 -> Courses 129, 130
+(1038, 129), (1038, 130),
+-- Order 1037 -> Courses 111, 113, 115
+(1037, 111), (1037, 113), (1037, 115),
+-- Order 1036 -> Courses 112, 114
+(1036, 112), (1036, 114);
+GO
+INSERT INTO include_course (Order_id, Course_id)
+VALUES
+(1046, 109), (1046, 114), (1046, 120), -- Order 1046 với các khóa học 109, 114, 120
+(1047, 121), (1047, 116), (1047, 119), -- Order 1047 với các khóa học 121, 116, 119
+(1048, 124), (1048, 115), (1048, 129), -- Order 1048 với các khóa học 124, 115, 129
+(1049, 130), (1049, 109), (1049, 116), -- Order 1049 với các khóa học 130, 109, 116
+(1050, 114), (1050, 115), (1050, 120), -- Order 1050 với các khóa học 114, 115, 120
+(1051, 121), (1051, 129), (1051, 119), -- Order 1051 với các khóa học 121, 129, 119
+(1052, 130), (1052, 124), (1052, 115), -- Order 1052 với các khóa học 130, 124, 115
+(1053, 116), (1053, 109), (1053, 120), -- Order 1053 với các khóa học 116, 109, 120
+(1054, 121), (1054, 115), (1054, 129); -- Order 1054 với các khóa học 121, 115, 129
 GO
 
 -- Bảng Order_receipt
@@ -858,6 +1201,9 @@ GO
 
 -------------------------------------------------------------------------------------------------------------
 -- 2. Viết các trigger, thủ tục, hàm (4 điểm) 
+select * from [user]
+select * from user_address
+GO
 -- 2.1
 -- Stored procedure to insert a new user
 CREATE OR ALTER PROCEDURE sp_InsertUser
@@ -868,7 +1214,10 @@ CREATE OR ALTER PROCEDURE sp_InsertUser
     @Date_of_birth DATE,
     @Username NVARCHAR(100),
     @Password NVARCHAR(255),
-    @Phone_number NVARCHAR(20)
+    @Phone_number NVARCHAR(20),
+    @Address1 NVARCHAR(255) = NULL,
+    @Address2 NVARCHAR(255) = NULL,
+    @Address3 NVARCHAR(255) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -935,12 +1284,33 @@ BEGIN
     
     -- Insert new user
     BEGIN TRY
+        BEGIN TRANSACTION;
+
+        -- Insert user
         INSERT INTO [User] (id, Email, FName, LName, Date_of_birth, Username, Password, Phone_number)
         VALUES (@id, @Email, @FName, @LName, @Date_of_birth, @Username, @Password, @Phone_number);
+        -- Insert addresses if provided
+        IF @Address1 IS NOT NULL AND @Address1 <> ''
+        BEGIN
+            INSERT INTO user_address (User_id, User_addr) VALUES (@id, @Address1);
+        END
         
+        IF @Address2 IS NOT NULL AND @Address2 <> ''
+        BEGIN
+            INSERT INTO user_address (User_id, User_addr) VALUES (@id, @Address2);
+        END
+        
+        IF @Address3 IS NOT NULL AND @Address3 <> ''
+        BEGIN
+            INSERT INTO user_address (User_id, User_addr) VALUES (@id, @Address3);
+        END
+
+        COMMIT TRANSACTION;
         PRINT 'User inserted successfully';
     END TRY
     BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
         DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
         DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
         DECLARE @ErrorState INT = ERROR_STATE();
@@ -949,7 +1319,6 @@ BEGIN
     END CATCH
 END
 GO
-
 -- Stored procedure to update a user
 CREATE OR ALTER PROCEDURE sp_UpdateUser
     @id INT,
@@ -959,7 +1328,10 @@ CREATE OR ALTER PROCEDURE sp_UpdateUser
     @Date_of_birth DATE = NULL,
     @Username NVARCHAR(100) = NULL,
     @Password NVARCHAR(255) = NULL,
-    @Phone_number NVARCHAR(20) = NULL
+    @Phone_number NVARCHAR(20) = NULL,
+    @Address1 NVARCHAR(255) = NULL,
+    @Address2 NVARCHAR(255) = NULL,
+    @Address3 NVARCHAR(255) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1021,14 +1393,38 @@ BEGIN
     
     -- Execute update
     BEGIN TRY
+		BEGIN TRANSACTION
+
         EXEC sp_executesql @SQL, 
             N'@id INT, @Email NVARCHAR(255), @FName NVARCHAR(100), @LName NVARCHAR(100), 
               @Date_of_birth DATE, @Username NVARCHAR(100), @Password NVARCHAR(255), @Phone_number NVARCHAR(20)',
             @id, @Email, @FName, @LName, @Date_of_birth, @Username, @Password, @Phone_number;
+        -- Delete existing addresses for this user
+        DELETE FROM user_address WHERE User_id = @id;
         
+        -- Add new addresses if provided
+        IF @Address1 IS NOT NULL AND @Address1 <> ''
+        BEGIN
+            INSERT INTO user_address (User_id, User_addr) VALUES (@id, @Address1);
+        END
+        
+        IF @Address2 IS NOT NULL AND @Address2 <> ''
+        BEGIN
+            INSERT INTO user_address (User_id, User_addr) VALUES (@id, @Address2);
+        END
+        
+        IF @Address3 IS NOT NULL AND @Address3 <> ''
+        BEGIN
+            INSERT INTO user_address (User_id, User_addr) VALUES (@id, @Address3);
+        END
         PRINT 'User updated successfully';
+
+        COMMIT TRANSACTION;
     END TRY
     BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
         DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
         DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
         DECLARE @ErrorState INT = ERROR_STATE();
@@ -1040,7 +1436,8 @@ GO
 
 -- Stored procedure to delete a user
 CREATE OR ALTER PROCEDURE sp_DeleteUser
-    @id INT
+    @id INT,
+    @ForceDelete BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1052,68 +1449,68 @@ BEGIN
         RETURN;
     END
     
-    -- Check for dependencies in has_role table
-    IF EXISTS (SELECT 1 FROM has_role WHERE User_id = @id)
+    -- Chỉ cần kiểm tra các phụ thuộc còn lại không có CASCADE
+    IF @ForceDelete = 0
     BEGIN
-        RAISERROR('Cannot delete user with ID %d: User has assigned roles. Remove roles first.', 16, 1, @id);
-        RETURN;
+        -- Check for dependencies in Offer table
+        IF EXISTS (SELECT 1 FROM Offer WHERE user_id = @id)
+        BEGIN
+            RAISERROR('Cannot delete user with ID %d: User has offered courses. Use force = 1 to delete anyway.', 16, 1, @id);
+            RETURN;
+        END
+        
+        -- Check for dependencies in Order table
+        IF EXISTS (SELECT 1 FROM [Order] WHERE User_id = @id)
+        BEGIN
+            RAISERROR('Cannot delete user with ID %d: User has orders. Use force = 1 to delete anyway.', 16, 1, @id);
+            RETURN;
+        END
     END
     
-    -- Check for dependencies in user_address table
-    IF EXISTS (SELECT 1 FROM user_address WHERE User_id = @id)
-    BEGIN
-        RAISERROR('Cannot delete user with ID %d: User has address records. Remove addresses first.', 16, 1, @id);
-        RETURN;
-    END
-    
-    -- Check for dependencies in review_course table
-    IF EXISTS (SELECT 1 FROM review_course WHERE User_id = @id)
-    BEGIN
-        RAISERROR('Cannot delete user with ID %d: User has course reviews. Remove reviews first.', 16, 1, @id);
-        RETURN;
-    END
-    
-    -- Check for dependencies in Learn table
-    IF EXISTS (SELECT 1 FROM Learn WHERE User_id = @id)
-    BEGIN
-        RAISERROR('Cannot delete user with ID %d: User has learning records. Remove learning records first.', 16, 1, @id);
-        RETURN;
-    END
-    
-    -- Check for dependencies in follow table (as either user or follower)
-    IF EXISTS (SELECT 1 FROM follow WHERE User_id = @id OR Follower_id = @id)
-    BEGIN
-        RAISERROR('Cannot delete user with ID %d: User has follow relationships. Remove follow records first.', 16, 1, @id);
-        RETURN;
-    END
-    
-    -- Check for dependencies in Offer table
-    IF EXISTS (SELECT 1 FROM Offer WHERE user_id = @id)
-    BEGIN
-        RAISERROR('Cannot delete user with ID %d: User has offered courses. Remove course offerings first.', 16, 1, @id);
-        RETURN;
-    END
-    
-    -- Check for dependencies in Order table
-    IF EXISTS (SELECT 1 FROM [Order] WHERE User_id = @id)
-    BEGIN
-        RAISERROR('Cannot delete user with ID %d: User has orders. Remove orders first.', 16, 1, @id);
-        RETURN;
-    END
-    
-    -- Check for dependencies in obtain_certificate table
-    IF EXISTS (SELECT 1 FROM obtain_certificate WHERE User_id = @id)
-    BEGIN
-        RAISERROR('Cannot delete user with ID %d: User has certificates. Remove certificates first.', 16, 1, @id);
-        RETURN;
-    END
-    
-    -- Delete user
+    -- Delete user and handle dependencies
     BEGIN TRY
+        BEGIN TRANSACTION;
+        -- Luôn xóa các bản ghi follow trước khi xóa User
+        DELETE FROM follow WHERE User_id = @id OR Follower_id = @id;
+        
+        -- Xử lý các phụ thuộc không có CASCADE nếu ForceDelete = 1
+        IF @ForceDelete = 1
+        BEGIN
+            -- Xử lý orders và các bảng liên quan
+            DECLARE @OrderIds TABLE (OrderId INT);
+            INSERT INTO @OrderIds SELECT Order_id FROM [Order] WHERE User_id = @id;
+            
+            -- Xóa liên kết với mã giảm giá
+            DELETE FROM use_coupon WHERE Order_id IN (SELECT OrderId FROM @OrderIds);
+            
+            -- Xóa liên kết với khóa học
+            DELETE FROM include_course WHERE Order_id IN (SELECT OrderId FROM @OrderIds);
+            
+            -- Xóa hóa đơn
+            DELETE FROM Order_receipt WHERE Order_id IN (SELECT OrderId FROM @OrderIds);
+            
+            -- Xóa đơn hàng
+            DELETE FROM [Order] WHERE User_id = @id;
+            
+            -- Xử lý khóa học do người dùng cung cấp
+            DELETE FROM Offer WHERE user_id = @id;
+        END
+        
+        -- Xóa người dùng - các phụ thuộc với CASCADE sẽ tự động bị xóa
         DELETE FROM [User] WHERE id = @id;
-        PRINT 'User deleted successfully';
+        
+        COMMIT TRANSACTION;
+        
+        IF @ForceDelete = 1
+            PRINT 'User and all associated data deleted successfully';
+        ELSE
+            PRINT 'User deleted successfully. All CASCADE related data was automatically removed.';
+            
     END TRY
     BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+            
         DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
         DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
         DECLARE @ErrorState INT = ERROR_STATE();
@@ -1123,147 +1520,371 @@ BEGIN
 END
 GO
 
--- Example of successfully adding a new user
+-- Test Testcase cho sp_InsertUser
+-- 1. Thêm người dùng mới thành công với đầy đủ thông tin
+BEGIN TRANSACTION;
+PRINT '-------------- TEST 1: Insert new user with all information --------------';
 EXEC sp_InsertUser 
-    @id = 6, 
-    @Email = 'michael.johnson@example.com', 
-    @FName = 'Michael', 
-    @LName = 'Johnson', 
-    @Date_of_birth = '1994-06-15', 
-    @Username = 'michael94', 
-    @Password = 'Michael@Pass123', 
-    @Phone_number = '0923456789';
--- Output: User inserted successfully
+    @id = 10000, 
+    @Email = 'jennifer.nguyen@example.com', 
+    @FName = 'Jennifer', 
+    @LName = 'Nguyen', 
+    @Date_of_birth = '1992-08-25', 
+    @Username = 'jennifer92', 
+    @Password = 'Secure@Pass2025', 
+    @Phone_number = '0912345678',
+    @Address1 = '123 Riverview Apartments, District 2, HCMC',
+    @Address2 = '45 Garden Street, District 7, HCMC',
+    @Address3 = '78 Mountain Road, Dalat City';
 
--- Verify the new user was added successfully
-SELECT * FROM [User] WHERE id = 6; 
+-- Kiểm tra user đã được thêm thành công
+SELECT * FROM [User] WHERE id = 10000;
+SELECT * FROM user_address WHERE User_id = 10000;
 
--- Attempting to add a user with an ID that already exists
+ROLLBACK TRANSACTION;
+PRINT '-------------- END TEST 1 --------------';
+
+-- 2. Thêm người dùng với thông tin tối thiểu (không có địa chỉ)
+BEGIN TRANSACTION;
+PRINT '-------------- TEST 2: Insert user with minimum information --------------';
 EXEC sp_InsertUser 
-    @id = 1, -- ID 1 already belongs to Alice Nguyen
-    @Email = 'mark.wilson@example.com', 
-    @FName = 'Mark', 
-    @LName = 'Wilson', 
-    @Date_of_birth = '1995-05-05', 
-    @Username = 'markw95', 
-    @Password = 'Wilson@Pass456', 
-    @Phone_number = '0987654321';
--- Output: User with ID 1 already exists
+    @id = 111, 
+    @Email = 'thomas.le@example.com', 
+    @FName = 'Thomas', 
+    @LName = 'Le', 
+    @Date_of_birth = '1995-05-10', 
+    @Username = 'thomas95', 
+    @Password = 'ThomasSecure@123', 
+    @Phone_number = '0901234567';
 
--- Attempting to add a user with a username that's already taken
-EXEC sp_InsertUser 
-    @id = 7, 
-    @Email = 'sophie.lee@example.com', 
-    @FName = 'Sophie', 
-    @LName = 'Lee', 
-    @Date_of_birth = '1995-05-05', 
-    @Username = 'bob85', -- Username already used by Bob Tran (ID 2)
-    @Password = 'Sophie@Pass789', 
-    @Phone_number = '0987654321';
--- Output: Username "bob85" is already taken
+-- Kiểm tra user đã được thêm thành công
+SELECT * FROM [User] WHERE id = 111;
+SELECT * FROM user_address WHERE User_id = 111;
 
--- Attempting to add a user with invalid email format
+ROLLBACK TRANSACTION;
+PRINT '-------------- END TEST 2 --------------';
+
+-- 3. Thêm người dùng với ID đã tồn tại (kỳ vọng lỗi)
+BEGIN TRANSACTION;
+PRINT '-------------- TEST 3: Insert user with existing ID (expected error) --------------';
 EXEC sp_InsertUser 
-    @id = 7, 
+    @id = 1, -- ID này thuộc về Alice Nguyen
+    @Email = 'linda.pham@example.com', 
+    @FName = 'Linda', 
+    @LName = 'Pham', 
+    @Date_of_birth = '1993-12-15', 
+    @Username = 'linda93', 
+    @Password = 'LindaPa$$w0rd', 
+    @Phone_number = '0912345678';
+
+ROLLBACK TRANSACTION;
+PRINT '-------------- END TEST 3 --------------';
+
+-- 4. Thêm người dùng với Username đã tồn tại (kỳ vọng lỗi)
+BEGIN TRANSACTION;
+PRINT '-------------- TEST 4: Insert user with existing username (expected error) --------------';
+EXEC sp_InsertUser 
+    @id = 121, 
+    @Email = 'richard.tran@example.com', 
+    @FName = 'Richard', 
+    @LName = 'Tran', 
+    @Date_of_birth = '1990-07-15', 
+    @Username = 'alice90', -- Username này đã tồn tại
+    @Password = 'RichardP@ss123', 
+    @Phone_number = '0945678901';
+
+ROLLBACK TRANSACTION;
+PRINT '-------------- END TEST 4 --------------';
+
+-- 5. Thêm người dùng với email không đúng định dạng (kỳ vọng lỗi)
+BEGIN TRANSACTION;
+PRINT '-------------- TEST 5: Insert user with invalid email format (expected error) --------------';
+EXEC sp_InsertUser 
+    @id = 133, 
     @Email = 'invalid-email', 
-    @FName = 'Sophie', 
-    @LName = 'Lee', 
-    @Date_of_birth = '1995-05-05', 
-    @Username = 'sophie95', 
-    @Password = 'Sophie@Pass789', 
-    @Phone_number = '0987654321';
--- Output: Invalid email format: invalid-email
+    @FName = 'Susan', 
+    @LName = 'Hoang', 
+    @Date_of_birth = '1998-03-25', 
+    @Username = 'susan98', 
+    @Password = 'Susan$ecurePass', 
+    @Phone_number = '0956789012';
 
--- Attempting to add a user with a password less than 8 characters
-EXEC sp_InsertUser 
-    @id = 7, 
-    @Email = 'sophie.lee@example.com', 
-    @FName = 'Sophie', 
-    @LName = 'Lee', 
-    @Date_of_birth = '1995-05-05', 
-    @Username = 'sophie95', 
-    @Password = 'short', 
-    @Phone_number = '0987654321';
--- Output: Password must be at least 8 characters long
+ROLLBACK TRANSACTION;
+PRINT '-------------- END TEST 5 --------------';
 
--- Attempting to add an underage user (less than 13 years old)
+-- 6. Thêm người dùng với mật khẩu quá ngắn (kỳ vọng lỗi)
+BEGIN TRANSACTION;
+PRINT '-------------- TEST 6: Insert user with short password (expected error) --------------';
 EXEC sp_InsertUser 
-    @id = 7, 
+    @id = 144, 
+    @Email = 'peter.nguyen@example.com', 
+    @FName = 'Peter', 
+    @LName = 'Nguyen', 
+    @Date_of_birth = '1996-02-28', 
+    @Username = 'peter96', 
+    @Password = 'short', -- Mật khẩu quá ngắn
+    @Phone_number = '0967890123';
+
+ROLLBACK TRANSACTION;
+PRINT '-------------- END TEST 6 --------------';
+
+-- 7. Thêm người dùng chưa đủ tuổi (kỳ vọng lỗi)
+BEGIN TRANSACTION;
+PRINT '-------------- TEST 7: Insert underage user (expected error) --------------';
+EXEC sp_InsertUser 
+    @id = 155, 
     @Email = 'young.student@example.com', 
     @FName = 'Young', 
     @LName = 'Student', 
-    @Date_of_birth = '2020-01-01', -- Only 5 years old in 2025
-    @Username = 'youngstudent', 
-    @Password = 'Student@Pass123', 
-    @Phone_number = '0987654321';
--- Output: User must be at least 13 years old
+    @Date_of_birth = '2015-01-01', -- Người dùng mới 10 tuổi vào năm 2025
+    @Username = 'young_student', 
+    @Password = 'StudentSecure@123', 
+    @Phone_number = '0978901234';
 
--- Example of successfully updating Alice's contact information
+ROLLBACK TRANSACTION;
+PRINT '-------------- END TEST 7 --------------';
+
+
+-- Testcase cho sp_UpdateUser
+-- 8. Cập nhật thông tin cơ bản của người dùng
+BEGIN TRANSACTION;
+PRINT '-------------- TEST 8: Update basic user information --------------';
 EXEC sp_UpdateUser 
-    @id = 1, 
-    @Email = 'alice.nguyen.updated@example.com', 
-    @Phone_number = '0901234999';
--- Output: User updated successfully
+    @id = 3, 
+    @Email = 'charlie.updated@example.com', 
+    @Phone_number = '0923456789', 
+    @FName = 'Charles';
 
--- Update multiple fields for Bob, who got married and changed his name
+-- Kiểm tra thông tin đã được cập nhật
+SELECT id, Email, FName, Phone_number FROM [User] WHERE id = 3;
+
+ROLLBACK TRANSACTION;
+PRINT '-------------- END TEST 8 --------------';
+
+-- 9. Cập nhật thông tin và địa chỉ của người dùng
+BEGIN TRANSACTION;
+PRINT '-------------- TEST 9: Update user information and addresses --------------';
 EXEC sp_UpdateUser 
-    @id = 2, 
-    @FName = 'Bob', 
-    @LName = 'Nguyen', 
-    @Password = 'BobNewSecurePass456!';
--- Output: User updated successfully
+    @id = 4, 
+    @LName = 'Pham-Tran', 
+    @Password = 'NewSecureP@ss456',
+    @Address1 = '100 Park Avenue, District 1, HCMC',
+    @Address2 = '25 Riverside Drive, District 2, HCMC';
 
--- Attempting to update a user that doesn't exist
+-- Kiểm tra thông tin đã được cập nhật
+SELECT id, LName, Password FROM [User] WHERE id = 4;
+SELECT User_id, User_addr FROM user_address WHERE User_id = 4;
+
+ROLLBACK TRANSACTION;
+PRINT '-------------- END TEST 9 --------------';
+
+-- 10. Cập nhật người dùng không tồn tại (kỳ vọng lỗi)
+BEGIN TRANSACTION;
+PRINT '-------------- TEST 10: Update non-existent user (expected error) --------------';
 EXEC sp_UpdateUser 
     @id = 99, 
     @Email = 'nonexistent@example.com';
--- Output: User with ID 99 does not exist
 
--- Attempting to update Charlie's username to one that's already taken
-EXEC sp_UpdateUser 
-    @id = 3, 
-    @Username = 'alice90'; -- Username already belongs to Alice (user 1)
--- Output: Username "alice90" is already taken
+ROLLBACK TRANSACTION;
+PRINT '-------------- END TEST 10 --------------';
 
--- Attempting to update David's email with invalid format
-EXEC sp_UpdateUser 
-    @id = 4, 
-    @Email = 'invalid-format';
--- Output: Invalid email format: invalid-format
-
--- Attempting to update Eve's password to something too short
+-- 11. Cập nhật username trùng với người dùng khác (kỳ vọng lỗi)
+BEGIN TRANSACTION;
+PRINT '-------------- TEST 11: Update to existing username (expected error) --------------';
 EXEC sp_UpdateUser 
     @id = 5, 
-    @Password = 'short'; -- Password too short
--- Output: Password must be at least 8 characters long
+    @Username = 'bob85'; -- Username này đã thuộc về Bob
 
--- Attempting to delete Alice (user 1) who has roles, follows, and reviews
+ROLLBACK TRANSACTION;
+PRINT '-------------- END TEST 11 --------------';
+
+-- 12. Cập nhật email không hợp lệ (kỳ vọng lỗi)
+BEGIN TRANSACTION;
+PRINT '-------------- TEST 12: Update with invalid email (expected error) --------------';
+EXEC sp_UpdateUser 
+    @id = 1, 
+    @Email = 'not-an-email';
+
+ROLLBACK TRANSACTION;
+PRINT '-------------- END TEST 12 --------------';
+
+-- 13. Cập nhật mật khẩu quá ngắn (kỳ vọng lỗi)
+BEGIN TRANSACTION;
+PRINT '-------------- TEST 13: Update with short password (expected error) --------------';
+EXEC sp_UpdateUser 
+    @id = 2, 
+    @Password = '123';
+
+ROLLBACK TRANSACTION;
+PRINT '-------------- END TEST 13 --------------';
+
+-- 14. Cập nhật ngày sinh khiến người dùng chưa đủ tuổi (kỳ vọng lỗi)
+BEGIN TRANSACTION;
+PRINT '-------------- TEST 14: Update to underage (expected error) --------------';
+EXEC sp_UpdateUser 
+    @id = 3, 
+    @Date_of_birth = '2018-01-01'; -- Chỉ mới 7 tuổi vào năm 2025
+
+ROLLBACK TRANSACTION;
+PRINT '-------------- END TEST 14 --------------';
+
+
+
+-- Testcase cho sp_DeleteUser
+-- 15. Xóa người dùng cơ bản (không có phụ thuộc phức tạp)
+BEGIN TRANSACTION;
+PRINT '-------------- TEST 15: Delete basic user --------------';
+-- Thêm người dùng mới để test xóa
+EXEC sp_InsertUser 
+    @id = 200, 
+    @Email = 'temp.user@example.com', 
+    @FName = 'Temp', 
+    @LName = 'User', 
+    @Date_of_birth = '1990-01-01', 
+    @Username = 'tempuser', 
+    @Password = 'Temporary@123', 
+    @Phone_number = '0912345678',
+    @Address1 = '123 Test Street, District 1, HCMC';
+    
+-- Kiểm tra người dùng đã được tạo
+SELECT * FROM [User] WHERE id = 200;
+SELECT * FROM user_address WHERE User_id = 200;
+
+-- Xóa người dùng
+EXEC sp_DeleteUser @id = 200;
+
+-- Kiểm tra người dùng và dữ liệu liên quan đã bị xóa
+SELECT * FROM [User] WHERE id = 200;
+SELECT * FROM user_address WHERE User_id = 200;
+
+ROLLBACK TRANSACTION;
+PRINT '-------------- END TEST 15 --------------';
+
+-- 16. Xóa người dùng có khóa học đã cung cấp (kỳ vọng lỗi khi không có ForceDelete)
+BEGIN TRANSACTION;
+PRINT '-------------- TEST 16: Delete user with offered courses (expected error without ForceDelete) --------------';
+-- Kiểm tra xem Bob (id = 2) có cung cấp khóa học nào không
+SELECT * FROM Offer WHERE user_id = 2;
+
+-- Thử xóa người dùng mà không dùng ForceDelete
+EXEC sp_DeleteUser @id = 2;
+
+-- Kiểm tra người dùng vẫn tồn tại
+SELECT * FROM [User] WHERE id = 2;
+
+ROLLBACK TRANSACTION;
+PRINT '-------------- END TEST 16 --------------';
+
+-- 17. Xóa người dùng có đơn hàng (kỳ vọng lỗi khi không có ForceDelete)
+BEGIN TRANSACTION;
+PRINT '-------------- TEST 17: Delete user with orders (expected error without ForceDelete) --------------';
+-- Kiểm tra xem Alice (id = 1) có đơn hàng nào không
+SELECT * FROM [Order] WHERE User_id = 1;
+
+-- Thử xóa người dùng mà không dùng ForceDelete
 EXEC sp_DeleteUser @id = 1;
--- Output: Cannot delete user with ID 1: User has assigned roles. Remove roles first.
 
--- Remove Michael's (new user 6) dependencies one by one
--- First, make sure Michael has some dependencies (add them if needed)
-INSERT INTO has_role (User_id, Role_id) VALUES (6, 3); -- Michael is a Student
-INSERT INTO user_address (User_id, User_addr) VALUES (6, '789 Le Duan, District 3, HCMC');
+-- Kiểm tra người dùng vẫn tồn tại
+SELECT * FROM [User] WHERE id = 1;
 
--- Then remove dependencies systematically
-DELETE FROM has_role WHERE User_id = 6;
-DELETE FROM user_address WHERE User_id = 6;
--- Remove any other dependencies...
+ROLLBACK TRANSACTION;
+PRINT '-------------- END TEST 17 --------------';
 
--- Now we can delete Michael's account
-EXEC sp_DeleteUser @id = 6;
--- Output: User deleted successfully
+-- 18. Xóa người dùng có khóa học đã cung cấp với ForceDelete
+BEGIN TRANSACTION;
+PRINT '-------------- TEST 18: Delete user with offered courses using ForceDelete --------------';
+-- Kiểm tra Bob và các khóa học của anh ấy trước khi xóa
+SELECT * FROM [User] WHERE id = 2;
+SELECT * FROM Offer WHERE user_id = 2;
+SELECT * FROM follow WHERE User_id = 2 OR Follower_id = 2;
 
--- Attempting to delete a user that doesn't exist
+-- Xóa với ForceDelete
+EXEC sp_DeleteUser @id = 2, @ForceDelete = 1;
+
+-- Kiểm tra người dùng và dữ liệu liên quan đã bị xóa
+SELECT * FROM [User] WHERE id = 2;
+SELECT * FROM Offer WHERE user_id = 2;
+SELECT * FROM follow WHERE User_id = 2 OR Follower_id = 2;
+
+ROLLBACK TRANSACTION;
+PRINT '-------------- END TEST 18 --------------';
+
+-- 19. Xóa người dùng có đơn hàng với ForceDelete
+BEGIN TRANSACTION;
+PRINT '-------------- TEST 19: Delete user with orders using ForceDelete --------------';
+-- Kiểm tra Alice và các đơn hàng của cô ấy trước khi xóa
+SELECT * FROM [User] WHERE id = 1;
+SELECT * FROM [Order] WHERE User_id = 1;
+SELECT o.Order_id, uc.Coupon_id FROM [Order] o
+JOIN use_coupon uc ON o.Order_id = uc.Order_id
+WHERE o.User_id = 1;
+
+-- Xóa với ForceDelete
+EXEC sp_DeleteUser @id = 1, @ForceDelete = 1;
+
+-- Kiểm tra người dùng và dữ liệu liên quan đã bị xóa
+SELECT * FROM [User] WHERE id = 1;
+SELECT * FROM [Order] WHERE User_id = 1;
+SELECT o.Order_id, uc.Coupon_id FROM [Order] o
+JOIN use_coupon uc ON o.Order_id = uc.Order_id
+WHERE o.User_id = 1;
+
+ROLLBACK TRANSACTION;
+PRINT '-------------- END TEST 19 --------------';
+
+-- 20. Thử xóa người dùng không tồn tại
+BEGIN TRANSACTION;
+PRINT '-------------- TEST 20: Delete non-existent user (expected error) --------------';
 EXEC sp_DeleteUser @id = 99;
--- Output: User with ID 99 does not exist
+ROLLBACK TRANSACTION;
+PRINT '-------------- END TEST 20 --------------';
+
+-- 21. Kiểm tra CASCADE tự động xóa dữ liệu phụ thuộc
+BEGIN TRANSACTION;
+PRINT '-------------- TEST 21: Verify CASCADE automatic deletion --------------';
+
+-- Tạo dữ liệu test cho người dùng mới
+EXEC sp_InsertUser 
+    @id = 30, 
+    @Email = 'cascade.test@example.com', 
+    @FName = 'Cascade', 
+    @LName = 'Test', 
+    @Date_of_birth = '1995-05-05', 
+    @Username = 'cascadetest', 
+    @Password = 'Cascade@Test123', 
+    @Phone_number = '0912345678',
+    @Address1 = '123 Test Street, HCMC';
+
+-- Thêm vai trò cho người dùng này (phụ thuộc CASCADE)
+INSERT INTO has_role (User_id, Role_id) VALUES (30, 3);
+
+-- Thêm đánh giá khóa học (phụ thuộc CASCADE)
+--INSERT INTO review_course (User_id, Course_id, Comment, Date, Rating_score)
+--VALUES (30, 101, 'This is a test review', GETDATE(), 4.5);
+
+-- Kiểm tra dữ liệu đã được tạo
+SELECT * FROM [User] WHERE id = 30;
+SELECT * FROM user_address WHERE User_id = 30;
+SELECT * FROM has_role WHERE User_id = 30;
+SELECT * FROM review_course WHERE User_id = 30;
+
+-- Xóa người dùng (không cần ForceDelete vì không có phụ thuộc phức tạp)
+EXEC sp_DeleteUser @id = 30;
+
+-- Kiểm tra người dùng và tất cả dữ liệu phụ thuộc đã bị xóa
+SELECT * FROM [User] WHERE id = 30;
+SELECT * FROM user_address WHERE User_id = 30; -- Nên bị xóa bởi CASCADE
+SELECT * FROM has_role WHERE User_id = 30; -- Nên bị xóa bởi CASCADE
+SELECT * FROM review_course WHERE User_id = 30; -- Nên bị xóa bởi CASCADE
+
+ROLLBACK TRANSACTION;
+PRINT '-------------- END TEST 21 --------------';
 
 GO
 -- 2.2
 -- Trigger 1
 -- update Rating from user --
-CREATE TRIGGER trg_Update_Course_Rating
+CREATE OR ALTER TRIGGER trg_Update_Course_Rating
 ON review_course
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -1309,12 +1930,13 @@ GO
 
 -- Trigger 2
 -- update TotalFee from Course --
-CREATE TRIGGER trg_Update_TotalFee
+CREATE OR ALTER TRIGGER trg_Update_TotalFee
 ON include_course
 AFTER INSERT, DELETE
 AS
 BEGIN
     DECLARE @Order_id INT;
+    DECLARE @TotalFee INT;
 
     -- Handle INSERT
     IF EXISTS (SELECT * FROM INSERTED)
@@ -1322,75 +1944,145 @@ BEGIN
     ELSE
         SELECT @Order_id = Order_id FROM DELETED;
 
-    UPDATE O
-    SET O.Total_fee = (
-        SELECT SUM(C.Fee)
-        FROM include_course IC
-        JOIN Course C ON IC.Course_id = C.id
-        WHERE IC.Order_id = @Order_id
-    )
-    FROM [Order] O
-    WHERE O.Order_id = @Order_id;
+    SELECT @TotalFee = SUM(C.Fee)
+    FROM include_course IC
+    JOIN Course C ON IC.Course_id = C.id 
+    WHERE IC.Order_id = @Order_id;
+
+    SET @TotalFee = ISNULL(@TotalFee, 0);  
+
+    DECLARE @FixedDiscount INT = 0;
+
+    SELECT @FixedDiscount = ISNULL(SUM(c.Discount_value), 0)
+    FROM use_coupon uc 
+    JOIN Coupon c ON uc.Coupon_id = c.Coupon_id
+    WHERE uc.Order_id = @Order_id
+      AND c.End_date >= GETDATE()
+      AND c.Discount_type = 'Fixed'
+      AND c.Amount > 0;
+    
+    SET @TotalFee = @TotalFee - @FixedDiscount;
+
+    IF @TotalFee < 0
+        SET @TotalFee = 0;
+
+    DECLARE @PercentageDiscount INT = 0;
+
+    SELECT @PercentageDiscount = ISNULL(SUM(c.Discount_value), 0)
+    FROM use_coupon uc 
+    JOIN Coupon C ON uc.Coupon_id = c.Coupon_id
+    WHERE uc.Order_id = @Order_id
+      AND c.End_date >= GETDATE()
+      AND c.Discount_type = 'Percentage'
+      AND c.Amount > 0;
+
+    IF @PercentageDiscount > 0
+    BEGIN 
+        SET @TotalFee = @TotalFee * (100 - @PercentageDiscount) / 100;
+    END
+    IF @TotalFee < 0 
+        SET @TotalFee = 0;
+
+    UPDATE [Order]
+    SET Total_fee = @TotalFee
+    WHERE Order_id = @Order_id;
 END;
 GO
 
-
--- Test Trigger 2
--- Check it's created correctly
-SELECT * FROM [Order] WHERE Order_id = 3001;
+INSERT INTO Coupon (Coupon_id, Coupon_code, Start_date, End_date, Discount_type, Discount_value, Coupon_type, Amount, Duration)
+VALUES
+(6, 'NEWYEAR25', '2025-01-01', '2025-12-31', 'Fixed', 25, 'Seasonal', 100, 30),
+(7, 'SUMMER10', '2025-04-01', '2025-08-31', 'Percentage', 10, 'Seasonal', 100, 30),
+(8, 'SUMMERFIXED10', '2025-04-01', '2025-08-31', 'Fixed', 10, 'Seasonal', 100, 30);
 GO
 
-INSERT INTO include_course (Order_id, Course_id)
-VALUES 
-(3001, 101)
+INSERT INTO use_coupon (Coupon_id, Order_id)
+VALUES (6, 1002);  -- Apply Fixed discount of 25
 GO
 
-DELETE FROM include_course
-WHERE Order_id = 3001 AND Course_id = 101;
-
-SELECT * FROM Course
-GO
-SELECT * FROM include_course
+INSERT INTO include_course (Order_id, Course_id) VALUES (1002, 103);
 GO
 
-
-DELETE FROM include_course
-WHERE Order_id = 3001 AND Course_id = 101;
+INSERT INTO use_coupon (Coupon_id, Order_id)
+VALUES (7, 1002);  -- Apply Pencentage discount of 10
 GO
 
+INSERT INTO use_coupon (Coupon_id, Order_id)
+VALUES (8, 1002);  -- Apply FIXED discount of 10
+GO
+DELETE FROM include_course WHERE Order_id = 1002 and Course_id = 103
+
+SELECT * FROM [Order] WHERE Order_id = 1002;
+select * from include_course
+select * from Course
+select * from Coupon
+
+GO
 -- 2.3
 -- Procedure 1
-CREATE OR ALTER PROCEDURE sp_GetTopRatedCourseReviews
-    @MinRating DECIMAL(2,1)
+CREATE OR ALTER PROCEDURE sp_GetTopRatedCoursesWithFilter
+    @SubjectKeyword NVARCHAR(100) = NULL,
+    @CourseKeyword NVARCHAR(255) = NULL,
+    @MinRating DECIMAL(2,1) = 0.0,
+	@MinFee INT = 0,
+    @MaxFee INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
 
     SELECT 
-        c.id AS CourseId,
         c.CName AS CourseName,
-        u.id AS UserId,
-        u.Username,
-        rc.Rating_score,
-        rc.Comment,
-        rc.Date
+        c.Rating AS AvgRating,
+        u.FName + ' ' + u.LName AS OfferedBy,
+        c.Enrollment_count AS NumCompletedOrders,
+        c.Fee,
+        COUNT(DISTINCT rc.User_id) AS ReviewCount
     FROM 
-        review_course rc
-        INNER JOIN Course c ON rc.Course_id = c.id
-        INNER JOIN [User] u ON rc.User_id = u.id
+        Course c
+        INNER JOIN has_course hc ON hc.Course_id = c.id
+        INNER JOIN Subject s ON hc.Subject_id = s.id
+        INNER JOIN Offer ofr ON ofr.Course_id = c.id
+        INNER JOIN [User] u ON ofr.user_id = u.id
+        LEFT JOIN review_course rc ON rc.Course_id = c.id
     WHERE 
-        rc.Rating_score >= @MinRating
+        (@SubjectKeyword IS NULL OR @SubjectKeyword = '' OR s.SName LIKE '%' + @SubjectKeyword + '%')
+        AND (@CourseKeyword IS NULL OR @CourseKeyword = '' OR c.CName LIKE '%' + @CourseKeyword + '%')
+        AND c.Rating >= @MinRating
+		AND c.Fee >= @MinFee
+        AND (@MaxFee IS NULL OR c.Fee <= @MaxFee)
+    GROUP BY 
+        c.CName, u.FName, u.LName, c.Rating, c.Enrollment_count, c.Fee
     ORDER BY 
-        rc.Rating_score DESC;
+        AvgRating DESC;
 END;
 GO
 
-SELECT * FROM review_course
 
-EXEC sp_GetTopRatedCourseReviews @MinRating = 2.5;
+EXEC sp_GetTopRatedCoursesWithFilter;
+EXEC sp_GetTopRatedCoursesWithFilter 
+    @SubjectKeyword = 'Web Development',
+    @CourseKeyword = 'UI',
+    @MinRating = 3.7,
+    @MinFee = 100,
+    @MaxFee = 500;
+EXEC sp_GetTopRatedCoursesWithFilter @MinRating = 4.0;
+EXEC sp_GetTopRatedCoursesWithFilter 
+    @SubjectKeyword = 'Cybersecurity', 
+    @CourseKeyword = 'Calculus I',
+    @MinRating = 3.5;
+
+
+select * FROM Course
+select * FROM has_course
+select * FROM Subject
+select * FROM [user]
+select * FROM Offer
+select * FROM include_course
+select * FROM [Order]
+select * FROM review_course
+
 
 GO
-
 -- Procedure 2
 CREATE PROCEDURE GetUserNetworkStats
     @MinFollowers INT = 0,    
@@ -1494,57 +2186,96 @@ SELECT * FROM getComplete(1,0.0);
 
 GO 
 -- Function 2
-CREATE OR ALTER FUNCTION overDay
+CREATE OR ALTER FUNCTION trendCourseSubject
 (
-	@threshold FLOAT,
-	@days INT
+	@date_desire DATETIME,
+	@top INT,
+	@subject_name NVARCHAR(100)
 )
-
 RETURNS @Result TABLE (
-	u_id INT,
-	c_id INT,
-	cur_proc FLOAT
+    c_id INT,
+    cname NVARCHAR(100),
+    Num_buy INT,
+    rating DECIMAL(3,1)
 )
 AS
-BEGIN 
-	DECLARE @id INT;
-	DECLARE @o_dat DATETIME;
-	DECLARE @c_id INT;
-	DECLARE @dif_d DATETIME;
-	DECLARE @cur_rate FLOAT;
+BEGIN
+    IF @top <= 0 
+        RETURN;
 
-	DECLARE cur CURSOR FOR
-        SELECT User_id, Ord_date, Course_id, DATEDIFF(DAY, Ord_date, GETDATE()) as diff_day
-			FROM [Order] O, [user] U, include_course I
-			WHERE O.User_id = U.id 
-				AND O.Order_id = I.Order_id 
-				AND O.Ord_status = 'completed'
-				AND DATEDIFF(DAY, Ord_date, GETDATE()) > @days;
+    DECLARE @Course_id INT, @Num_buy INT, @Rating DECIMAL(3,1), @Cname NVARCHAR(100);
+    DECLARE @Counter INT = 0;
 
-	OPEN cur;
-    FETCH NEXT FROM cur INTO @id, @o_dat, @c_id, @dif_d;
-	WHILE @@FETCH_STATUS = 0
+    DECLARE cur CURSOR FOR
+        SELECT I.Course_id, C.CName, COUNT(*) AS Num_buy, C.Rating
+        FROM [Order] O
+            JOIN include_course I ON O.Order_id = I.Order_id
+            JOIN Course C ON I.Course_id = C.id
+            JOIN has_course H ON H.Course_id = C.id
+            JOIN [Subject] S ON S.id = H.Subject_id
+        WHERE O.Ord_status = 'Completed'
+          AND (@date_desire IS NULL OR O.Ord_date > @date_desire)
+          AND (@subject_name IS NULL OR S.SName = @subject_name)
+        GROUP BY I.Course_id, C.Rating, C.CName
+        ORDER BY COUNT(*) DESC, C.Rating DESC;
+
+    OPEN cur;
+    FETCH NEXT FROM cur INTO @Course_id, @Cname, @Num_buy, @Rating;
+
+    WHILE @@FETCH_STATUS = 0 AND @Counter < @top
     BEGIN
-		SELECT @cur_rate = current_process
-		FROM getComplete(@id,0)
-		WHERE course_id = @c_id
+        INSERT INTO @Result(c_id, cname, Num_buy, Rating)
+        VALUES (@Course_id, @Cname, @Num_buy, @Rating);
 
-		IF @cur_rate < @threshold
-		BEGIN
-            INSERT INTO @Result(u_id, c_id, cur_proc) VALUES (@id, @c_id, 0);
-        END
+        SET @Counter = @Counter + 1;
+        FETCH NEXT FROM cur INTO @Course_id, @Cname, @Num_buy, @Rating;
+    END
 
-		IF @threshold <= @cur_rate AND @cur_rate < 1 
-		BEGIN
-            INSERT INTO @Result(u_id, c_id, cur_proc) VALUES (@id, @c_id, @cur_rate);
-        END
-		FETCH NEXT FROM cur INTO @id, @o_dat, @c_id, @dif_d;
-	END
-	RETURN;
+    CLOSE cur;
+    DEALLOCATE cur;
+
+    RETURN;
 END;
-
 GO
 
+SELECT * FROM include_course
 SELECT * FROM [Order]
-SELECT *
-FROM overDay(0.4, 180)
+SELECT * FROM has_course
+SELECT * FROM trendCourseSubject('2025-04-01', 100, NULL); --yyyy/mm/dd
+SELECT * FROM trendCourseSubject('2024-04-01', 100, NULL); --yyyy/mm/dd
+
+SELECT * FROM trendCourseSubject(null, 100, NULL);
+SELECT * FROM trendCourseSubject('2024-04-01', 10, 'Mathematics');
+
+
+
+
+
+SELECT * FROM dbo.Answer;
+SELECT * FROM dbo.Assignment;
+SELECT * FROM dbo.Certificate;
+SELECT * FROM dbo.Chapter;
+SELECT * FROM dbo.Coupon;
+SELECT * FROM dbo.Course;
+SELECT * FROM dbo.follow;
+SELECT * FROM dbo.has_course;
+SELECT * FROM dbo.has_permission;
+SELECT * FROM dbo.has_role;
+SELECT * FROM dbo.include_course;
+SELECT * FROM dbo.Learn;
+SELECT * FROM dbo.Lesson;
+SELECT * FROM dbo.obtain_certificate;
+SELECT * FROM dbo.Offer;
+SELECT * FROM dbo.[Order];
+SELECT * FROM dbo.Order_receipt;
+SELECT * FROM dbo.permission;
+SELECT * FROM dbo.Question;
+SELECT * FROM dbo.Quiz;
+SELECT * FROM dbo.Reading;
+SELECT * FROM dbo.review_course;
+SELECT * FROM dbo.role;
+SELECT * FROM dbo.Subject;
+SELECT * FROM dbo.use_coupon;
+SELECT * FROM dbo.[user]
+SELECT * FROM dbo.user_address;
+SELECT * FROM dbo.Video;

@@ -8,7 +8,7 @@
 4. Run the application using your IDE or `mvn spring-boot:run`
 
 ### Frontend
-1. Navigate to the frontend directory at https://github.com/GiaLongDangPham/Coursera_Frontend
+1. Navigate to the frontend directory at https://github.com/GiaLongDangPham/Coursera_FE
 2. Run `npm install`
 3. Start the app using `ng serve`
 

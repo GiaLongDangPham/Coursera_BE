@@ -16,20 +16,15 @@
 
 #### 👥 User Management UI
 Manage users with full CRUD operations, search, validation and paging.
-![User Management](src/main/resources/templates/assets/giao_dien_users.png)
-
-#### ✅ Validation, Search, and Sorting
 Client-side validation, search by name, and sortable columns.
-![Validation, Search, Sorting](src/main/resources/templates/assets/validate_search_sort.png)
+![User Management](src/main/resources/templates/assets/all_users.png)
 
 #### 📝 Course Interface
 View and manage courses from users.
-![Review Management](src/main/resources/templates/assets/all_courses.png)
+Filter and search courses.
+![Course Management](src/main/resources/templates/assets/all_courses.png)
 
-#### 🔍 Filter, Search and Sort Courses
-Filter and search course reviews based on course name, user, or rating.
-![Filter and Search Reviews](src/main/resources/templates/assets/course_features.png)
+#### 📝 Course Interface
+View and manage trending courses. 
+![Course Management](src/main/resources/templates/assets/hot-trend-courses.png)
 
-#### 🔐 Basic Login Page
-Simple login screen with hardcoded credentials for demonstration.
-![Login Page](src/main/resources/templates/assets/basic_login.png)

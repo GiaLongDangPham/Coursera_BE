@@ -13,7 +13,8 @@ public class ReviewService {
     @Autowired
     private ReviewRepository reviewRepository;
 
-    public List<ReviewResponse> getTopRatedReviews(String subjectKeyword, String courseKeyword, Float minRating) {
-        return reviewRepository.getTopRatedReviews(subjectKeyword, courseKeyword, minRating);
+    public List<ReviewResponse> getTopRatedReviews(String subjectKeyword, String courseKeyword, Float minRating,
+                                                   Integer minFee, Integer maxFee) {
+        return reviewRepository.getTopRatedReviews(subjectKeyword, courseKeyword, minRating, minFee, maxFee);
     }
 }

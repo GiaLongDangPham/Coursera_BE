@@ -23,7 +23,10 @@ public class ReviewController {
     public ResponseEntity<List<ReviewResponse>> getTopRatedReviews(
             @RequestParam(defaultValue = "") String subjectKeyword,
             @RequestParam(defaultValue = "") String courseKeyword,
-            @RequestParam(defaultValue = "0.0") Float minRating) {
-        return ResponseEntity.ok(reviewService.getTopRatedReviews(subjectKeyword, courseKeyword, minRating));
+            @RequestParam(defaultValue = "0.0") Float minRating,
+            @RequestParam(defaultValue = "0") Integer minFee,
+            @RequestParam(defaultValue = "0") Integer maxFee)
+    {
+        return ResponseEntity.ok(reviewService.getTopRatedReviews(subjectKeyword, courseKeyword, minRating, minFee, maxFee));
     }
 }

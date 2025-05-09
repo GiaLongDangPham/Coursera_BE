@@ -4,6 +4,7 @@ import db.assignment.dto.response.ReviewResponse;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,12 +15,21 @@ public class ReviewRepository {
     @PersistenceContext
     private EntityManager entityManager;
 
-    public List<ReviewResponse> getTopRatedReviews(String subjectKeyword, String courseKeyword, Float minRating) {
+    public List<ReviewResponse> getTopRatedReviews(String subjectKeyword, String courseKeyword, Float minRating,
+                                                   Integer minFee, Integer maxFee) {
+        // Xây dựng câu truy vấn với các tham số phù hợp
+        String query = "EXEC sp_GetTopRatedCoursesWithFilter " +
+                ":subjectKeyword, :courseKeyword, :minRating, :minFee, :maxFee";
+
+        if(maxFee <= 0) maxFee = null;
+
         List<Object[]> result = entityManager
-                .createNativeQuery("EXEC sp_GetTopRatedCoursesWithFilter :subjectKeyword, :courseKeyword, :minRating")
-                .setParameter("subjectKeyword", subjectKeyword)
-                .setParameter("courseKeyword", courseKeyword)
+                .createNativeQuery(query)
+                .setParameter("subjectKeyword", StringUtils.hasText(subjectKeyword) ? subjectKeyword : null)
+                .setParameter("courseKeyword", StringUtils.hasText(courseKeyword) ? courseKeyword : null)
                 .setParameter("minRating", minRating)
+                .setParameter("minFee", minFee)
+                .setParameter("maxFee", maxFee != null ? maxFee : null)
                 .getResultList();
 
         List<ReviewResponse> reviews = new ArrayList<>();

@@ -441,13 +441,13 @@ BEGIN
         FROM inserted i
         CROSS APPLY (
             SELECT 
-                -- Tổng số bài học (duy nhất)
+                -- Tổng số bài học duy nhất trong khóa học
                 (SELECT COUNT(*) 
                  FROM (SELECT DISTINCT Chapter_id, Lesson_id
-                       FROM Learn
+                       FROM Lesson
                        WHERE Course_id = i.Course_id) AS TotalLessons) AS total_lessons,
 
-                -- Số bài học đã hoàn thành (duy nhất)
+                -- Số bài học hoàn thành duy nhất của người dùng trong khóa học
                 (SELECT COUNT(*) 
                  FROM (SELECT DISTINCT Chapter_id, Lesson_id
                        FROM Learn
@@ -455,15 +455,16 @@ BEGIN
                          AND User_id = i.User_id
                          AND Status = 'completed') AS CompletedLessons) AS completed_lessons
         ) AS progress
-        WHERE progress.total_lessons = 0
-           OR (1.0 * progress.completed_lessons / progress.total_lessons) <= 0.5
+		-- Chỉ tính những khóa học có bài học (Lesson)
+        WHERE progress.total_lessons > 0
+          AND (1.0 * progress.completed_lessons / NULLIF(progress.total_lessons, 0)) <= 0.5
     )
     BEGIN
         RAISERROR('Người dùng phải hoàn thành hơn 50%% nội dung khóa học để đánh giá.', 16, 1);
         RETURN;
-    END
+    END;
 
-    -- Chèn bình thường nếu đủ điều kiện
+    -- Chèn dữ liệu review nếu hợp lệ
     INSERT INTO review_course (User_id, Course_id, Comment, Date, Rating_score)
     SELECT User_id, Course_id, Comment, Date, Rating_score
     FROM inserted;
@@ -472,13 +473,13 @@ GO
 
 -- Kiểm tra user chưa hoàn thành 50% khóa học mà review
 select * from Learn
+select * from Lesson
 select * from review_course
 select * from Course
 select * from [User]
 INSERT INTO review_course (User_id, Course_id, Comment, Date, Rating_score)
 VALUES
- (4,101,'Great introduction to programming!','2024-01-15',4.5),
- (2,101,'Great introduction to programming!','2024-01-15',4.5)
+ (3,101,'Great introduction to programming!','2024-01-15',4.5)
 GO
 INSERT INTO review_course (User_id, Course_id, Comment, Date, Rating_score)
 VALUES
@@ -615,6 +616,28 @@ VALUES
  (2,5),
  (3,4);
 GO
+INSERT INTO follow (User_id, Follower_id)
+VALUES
+  (1,  8),   
+  (2,  9),   
+  (3, 10),   
+  (4, 11),   
+  (5, 12),   
+  (8,  1),   
+  (9,  2),   
+  (10, 3),   
+  (11, 4),   
+  (12, 5),   
+  (13, 14),  
+  (14, 13), 
+  (15, 16),  
+  (16, 15),  
+  (17, 18), 
+  (18, 17), 
+  (19, 20), 
+  (20, 19), 
+  (21, 22)
+GO
 
 -- Bảng user_address
 INSERT INTO user_address (User_id, User_addr)
@@ -654,6 +677,28 @@ VALUES
  (3,3),  -- Charlie là Student
  (4,4),  -- David là Moderator
  (5,5);  -- Eve là Guest
+GO
+INSERT INTO has_role (User_id, Role_id)
+VALUES
+ (3,2),
+ (4,2),
+ (5,2),
+ (6,2),
+ (7,2),
+ (8,2),
+ (9,2),
+ (10,2),
+ (11,2),
+ (12,2),
+ (13,2),
+ (14,2),
+ (15,2),
+ (16,2),
+ (17,2),
+ (18,2),
+ (19,2),
+ (20,2),
+ (21,2)
 GO
 
 -- Bảng has_permission
@@ -947,6 +992,44 @@ VALUES
  (101,5,3,'Functions Assignment','Build functions','Assignment'),
  (101,5,4,'Functions Quiz','Quiz on functions','Quiz');
 GO
+-- Bảng Chapter (5 chương cho Course 102)
+INSERT INTO Chapter (Chapter_id, Course_id, CName, CDescription)
+VALUES
+ (1,102,'Getting Started','Introduction to the course and setup'),
+ (2,102,'Basics','Core programming concepts'),
+ (3,102,'Control Flow','Conditional statements and loops'),
+ (4,102,'Data Structures','Arrays, lists, and dictionaries'),
+ (5,102,'Functions','Writing reusable code');
+GO
+-- Bảng Lesson (4 bài mỗi chương của Course 102)
+INSERT INTO Lesson (Course_id, Chapter_id, Lesson_id, LName, LDescription, LType)
+VALUES
+ -- Chương 1
+ (102,1,1,'Welcome','Course overview','Reading'),
+ (102,1,2,'Environment Setup','Install tools','Video'),
+ (102,1,3,'Hello Assignment','Write your first program','Assignment'),
+ (102,1,4,'Intro Quiz','Test basic concepts','Quiz'),
+ -- Chương 2
+ (102,2,1,'Variables','Understanding variables','Reading'),
+ (102,2,2,'Data Types','Different data types','Video'),
+ (102,2,3,'Variables Assignment','Practice with variables','Assignment'),
+ (102,2,4,'Variables Quiz','Quiz on variables','Quiz'),
+ -- Chương 3
+ (102,3,1,'If Statements','Conditionals explained','Reading'),
+ (102,3,2,'Loops','For and while loops','Video'),
+ (102,3,3,'Control Flow Assignment','Use loops and if','Assignment'),
+ (102,3,4,'Control Flow Quiz','Test control flow','Quiz'),
+ -- Chương 4
+ (102,4,1,'Lists','Working with lists','Reading'),
+ (102,4,2,'Dictionaries','Key-value pairs','Video'),
+ (102,4,3,'Data Struct Assignment','Practice data structures','Assignment'),
+ (102,4,4,'Data Struct Quiz','Quiz on data structures','Quiz'),
+ -- Chương 5
+ (102,5,1,'Functions','Defining functions','Reading'),
+ (102,5,2,'Parameters','Function parameters','Video'),
+ (102,5,3,'Functions Assignment','Build functions','Assignment'),
+ (102,5,4,'Functions Quiz','Quiz on functions','Quiz');
+GO
 
 -- Bảng Assignment
 INSERT INTO Assignment (Course_id, Chapter_id, Lesson_id, Number_of_attempts, Number_of_days, Passing_score, Instruction)
@@ -996,6 +1079,22 @@ VALUES
  (2,101,1,1,'completed',100,1),
  (3,101,2,1,'in-progress',NULL,1),
  (4,101,3,4,'not-started', NULL,1);
+GO
+select * from Learn
+select * from Chapter
+INSERT INTO Learn (User_id, Course_id, Chapter_id, Lesson_id, status, score, attempt)
+VALUES
+ (3,102,2,2,'in-progress',NULL,1),
+ (4,102,3,1,'not-started', NULL,1);
+GO
+
+INSERT INTO Learn (User_id, Course_id, Chapter_id, Lesson_id, status, score, attempt)
+VALUES
+ (1,103,1,1,'completed',100,1),
+ (1,103,1,2,'in-progress', NULL,1),
+ (2,103,2,1,'completed',100,1),
+ (3,103,2,2,'in-progress',NULL,1),
+ (4,103,3,1,'not-started', NULL,1);
 GO
 
 -- Bảng Question
@@ -1589,7 +1688,7 @@ EXEC sp_InsertUser
     @FName = 'Richard', 
     @LName = 'Tran', 
     @Date_of_birth = '1990-07-15', 
-    @Username = 'alice90', -- Username này đã tồn tại
+    @Username = 'alice9090', -- Username này đã tồn tại
     @Password = 'RichardP@ss123', 
     @Phone_number = '0945678901';
 
@@ -1682,7 +1781,7 @@ PRINT '-------------- END TEST 9 --------------';
 BEGIN TRANSACTION;
 PRINT '-------------- TEST 10: Update non-existent user (expected error) --------------';
 EXEC sp_UpdateUser 
-    @id = 99, 
+    @id = 99999, 
     @Email = 'nonexistent@example.com';
 
 ROLLBACK TRANSACTION;
@@ -1835,7 +1934,7 @@ PRINT '-------------- END TEST 19 --------------';
 -- 20. Thử xóa người dùng không tồn tại
 BEGIN TRANSACTION;
 PRINT '-------------- TEST 20: Delete non-existent user (expected error) --------------';
-EXEC sp_DeleteUser @id = 99;
+EXEC sp_DeleteUser @id = 99999;
 ROLLBACK TRANSACTION;
 PRINT '-------------- END TEST 20 --------------';
 
@@ -1908,26 +2007,52 @@ END;
 GO
 
 -- Test Trigger 1
-SELECT * FROM review_course WHERE Course_id = 101;
+-- STEP 0: Setup - Insert test user and course if not already present
+IF NOT EXISTS (SELECT 1 FROM [User] WHERE id = 99)
+    INSERT INTO [User] (id, Email, FName, LName, Date_of_birth, Username, Password)
+    VALUES (99, 'testuser@example.com', 'Test', 'User', '2000-01-01', 'testuser99', 'TestPass99!');
 
+IF NOT EXISTS (SELECT 1 FROM Course WHERE id = 999)
+    INSERT INTO Course (id, CName, CDescription, Outcome_info, Fee, Enrollment_count, Rating)
+    VALUES (999, 'Test Course', 'Test description', 'Test outcome', 100, 0, 0.0);
+
+-- STEP 1: Add a single review
+PRINT 'Step 1: Add 1st review - Expect rating = 4.0';
 INSERT INTO review_course (User_id, Course_id, Comment, Rating_score)
-VALUES (4, 101, 'This helped me a lot!', 2.5);
-GO
+VALUES (99, 999, 'Good course', 4.0);
 
-DELETE FROM review_course
-WHERE User_id = 4 AND Course_id = 101;
+SELECT Rating AS CurrentRating FROM Course WHERE id = 999;
 
+-- STEP 2: Add another review to same course
+PRINT 'Step 2: Add 2nd review - Expect rating = (4.0 + 5.0) / 2 = 4.5';
+INSERT INTO review_course (User_id, Course_id, Comment, Rating_score)
+VALUES (1, 999, 'Excellent', 5.0);
+
+SELECT Rating AS CurrentRating FROM Course WHERE id = 999;
+
+-- STEP 3: Update first review score
+PRINT 'Step 3: Update 1st review to 3.0 - Expect rating = (3.0 + 5.0) / 2 = 4.0';
 UPDATE review_course
-SET Comment = 'Loved it!',
-    Rating_score = 3.5,
-    Date = GETDATE()
-WHERE User_id = 1 AND Course_id = 101;
-GO
+SET Rating_score = 3.0
+WHERE User_id = 99 AND Course_id = 999;
 
--- Check if Course Rating updated
-SELECT * FROM Course WHERE id = 101;
-GO
+SELECT Rating AS CurrentRating FROM Course WHERE id = 999;
 
+-- STEP 4: Delete second review
+PRINT 'Step 4: Delete 2nd review - Expect rating = 3.0 (only one review left)';
+DELETE FROM review_course
+WHERE User_id = 1 AND Course_id = 999;
+
+SELECT Rating AS CurrentRating FROM Course WHERE id = 999;
+
+-- STEP 5: Delete last review - Expect rating = NULL
+PRINT 'Step 5: Delete last review - Expect rating = NULL';
+DELETE FROM review_course
+WHERE User_id = 99 AND Course_id = 999;
+
+SELECT Rating AS CurrentRating FROM Course WHERE id = 999;
+
+GO
 -- Trigger 2
 -- update TotalFee from Course --
 CREATE OR ALTER TRIGGER trg_Update_TotalFee
@@ -1989,33 +2114,124 @@ BEGIN
 END;
 GO
 
-INSERT INTO Coupon (Coupon_id, Coupon_code, Start_date, End_date, Discount_type, Discount_value, Coupon_type, Amount, Duration)
-VALUES
-(6, 'NEWYEAR25', '2025-01-01', '2025-12-31', 'Fixed', 25, 'Seasonal', 100, 30),
-(7, 'SUMMER10', '2025-04-01', '2025-08-31', 'Percentage', 10, 'Seasonal', 100, 30),
-(8, 'SUMMERFIXED10', '2025-04-01', '2025-08-31', 'Fixed', 10, 'Seasonal', 100, 30);
-GO
+-- Adding for use_coupon table --
+CREATE OR ALTER TRIGGER trg_Update_TotalFee_UseCoupon
+ON use_coupon
+AFTER INSERT, DELETE
+AS
+BEGIN
+    DECLARE @Order_id INT;
+    DECLARE @TotalFee INT;
 
-INSERT INTO use_coupon (Coupon_id, Order_id)
-VALUES (6, 1002);  -- Apply Fixed discount of 25
-GO
+    -- Determine affected Order_id
+    IF EXISTS (SELECT * FROM INSERTED)
+        SELECT @Order_id = Order_id FROM INSERTED;
+    ELSE
+        SELECT @Order_id = Order_id FROM DELETED;
 
-INSERT INTO include_course (Order_id, Course_id) VALUES (1002, 103);
-GO
+    -- Sum course fees for the order
+    SELECT @TotalFee = SUM(C.Fee)
+    FROM include_course IC
+    JOIN Course C ON IC.Course_id = C.id 
+    WHERE IC.Order_id = @Order_id;
 
-INSERT INTO use_coupon (Coupon_id, Order_id)
-VALUES (7, 1002);  -- Apply Pencentage discount of 10
-GO
+    SET @TotalFee = ISNULL(@TotalFee, 0);  
 
-INSERT INTO use_coupon (Coupon_id, Order_id)
-VALUES (8, 1002);  -- Apply FIXED discount of 10
+    -- Apply fixed discounts
+    DECLARE @FixedDiscount INT = 0;
+    SELECT @FixedDiscount = ISNULL(SUM(c.Discount_value), 0)
+    FROM use_coupon uc 
+    JOIN Coupon c ON uc.Coupon_id = c.Coupon_id
+    WHERE uc.Order_id = @Order_id
+      AND c.End_date >= GETDATE()
+      AND c.Discount_type = 'Fixed'
+      AND c.Amount > 0;
+    
+    SET @TotalFee = @TotalFee - @FixedDiscount;
+    IF @TotalFee < 0 SET @TotalFee = 0;
+
+    -- Apply percentage discounts
+    DECLARE @PercentageDiscount INT = 0;
+    SELECT @PercentageDiscount = ISNULL(SUM(c.Discount_value), 0)
+    FROM use_coupon uc 
+    JOIN Coupon c ON uc.Coupon_id = c.Coupon_id
+    WHERE uc.Order_id = @Order_id
+      AND c.End_date >= GETDATE()
+      AND c.Discount_type = 'Percentage'
+      AND c.Amount > 0;
+
+    IF @PercentageDiscount > 0
+        SET @TotalFee = @TotalFee * (100 - @PercentageDiscount) / 100;
+
+    IF @TotalFee < 0 SET @TotalFee = 0;
+
+    -- Update total fee in Order
+    UPDATE [Order]
+    SET Total_fee = @TotalFee
+    WHERE Order_id = @Order_id;
+END;
 GO
-DELETE FROM include_course WHERE Order_id = 1002 and Course_id = 103
+-- testing 2 triggers
+
+INSERT INTO [Order] (Order_id, User_id, Ord_status, Total_fee)
+VALUES (9999, 1, 'Pending', 0);
+
+-- STEP 1: Insert test coupons if not already present
+IF NOT EXISTS (SELECT 1 FROM Coupon WHERE Coupon_id = 8)
+BEGIN
+    INSERT INTO Coupon (Coupon_id, Coupon_code, Start_date, End_date, Discount_type, Discount_value, Coupon_type, Amount, Duration)
+    VALUES (8, 'TESTFIXED', '2025-01-01', '2025-12-31', 'Fixed', 50, 'Manual', 100, 10);
+END;
+
+IF NOT EXISTS (SELECT 1 FROM Coupon WHERE Coupon_id = 9)
+BEGIN
+    INSERT INTO Coupon (Coupon_id, Coupon_code, Start_date, End_date, Discount_type, Discount_value, Coupon_type, Amount, Duration)
+    VALUES (9, 'TESTPERCENT', '2025-01-01', '2025-12-31', 'Percentage', 20, 'Manual', 100, 10);
+END;
+
+select * from [Order] where Order_id = 9999
+
+-- STEP 2: Add Course 101 ($100) to test order
+PRINT 'Step 2 - Added Course 101';
+INSERT INTO include_course (Order_id, Course_id) VALUES (9999, 101);
+SELECT * FROM [Order] WHERE Order_id = 9999;
+
+-- STEP 3: Add Course 102 ($150) => Total fee = 250
+PRINT 'Step 3 - Added Course 102';
+INSERT INTO include_course (Order_id, Course_id) VALUES (9999, 102);
+SELECT * FROM [Order] WHERE Order_id = 9999;
+
+-- STEP 4: Apply fixed coupon ($50 off) => Total fee = 200
+PRINT 'Step 4 - Applied Fixed Coupon';
+INSERT INTO use_coupon (Coupon_id, Order_id) VALUES (8, 9999);
+SELECT * FROM [Order] WHERE Order_id = 9999;
+
+-- STEP 5: Apply percentage coupon (20% off) => Total fee = 160
+PRINT 'Step 5 - Applied Percentage Coupon';
+INSERT INTO use_coupon (Coupon_id, Order_id) VALUES (9, 9999);
+SELECT * FROM [Order] WHERE Order_id = 9999;
+
+-- STEP 6: Remove Course 101 ($100) => Fee = (250 - 100) = 150 → -50 = 100 → *0.8 = 80
+PRINT 'Step 6 - Removed Course 101';
+DELETE FROM include_course WHERE Order_id = 9999 AND Course_id = 101;
+SELECT * FROM [Order] WHERE Order_id = 9999;
+
+-- STEP 7: Remove fixed coupon => Fee = 150 * 0.8 = 120
+PRINT 'Step 7 - Removed Fixed Coupon';
+DELETE FROM use_coupon WHERE Order_id = 9999 AND Coupon_id = 8;
+SELECT * FROM [Order] WHERE Order_id = 9999;
+
+-- STEP 8: Remove percentage coupon => Fee = 150
+PRINT 'Step 8 - Removed Percentage Coupon';
+DELETE FROM use_coupon WHERE Order_id = 9999 AND Coupon_id = 9;
+SELECT * FROM [Order] WHERE Order_id = 9999;
 
 SELECT * FROM [Order] WHERE Order_id = 1002;
 select * from include_course
 select * from Course
 select * from Coupon
+select * from use_coupon
+delete from use_coupon where Order_id = 9999
 
 GO
 -- 2.3
@@ -2084,37 +2300,47 @@ select * FROM review_course
 
 GO
 -- Procedure 2
-CREATE PROCEDURE GetUserNetworkStats
-    @MinFollowers INT = 0,    
-    @MinFollowing INT = 0    
+CREATE OR ALTER PROCEDURE sp_GetInstructorStats
+    @MinFollowers   INT           = 0,      
+    @MinAvgRating   DECIMAL(3,1)  = 0.0     
 AS
 BEGIN
+    SET NOCOUNT ON;
+
     SELECT
-        u.id AS UserId, u.Username AS UserName,
-        COUNT(DISTINCT f1.Follower_id) AS FollowerCount,
-        COUNT(DISTINCT f2.User_id)     AS FollowingCount
-    FROM [User] AS u
-    LEFT JOIN follow AS f1
-        ON u.id = f1.User_id            
-    LEFT JOIN follow AS f2
-        ON u.id = f2.Follower_id        
-    GROUP BY
-        u.id, u.Username
+        u.id                         AS InstructorId,
+        u.Username                   AS InstructorName,
+        COUNT(DISTINCT f.Follower_id)    AS FollowerCount,
+        COUNT(DISTINCT o.Course_id)       AS NumCoursesOffered,
+        ROUND(AVG(c.Rating),1)           AS AvgCourseRating
+    FROM [User] u
+    INNER JOIN has_role hr ON u.id = hr.User_id
+    INNER JOIN role r ON hr.Role_id = r.id
+    LEFT JOIN follow f ON u.id = f.User_id
+    LEFT JOIN Offer o ON u.id = o.User_id
+    LEFT JOIN Course c ON o.Course_id = c.id
+    WHERE r.RName = 'Instructor'
+    GROUP BY u.id, u.Username
     HAVING
-        COUNT(DISTINCT f1.Follower_id) >= @MinFollowers
-        AND COUNT(DISTINCT f2.User_id)    >= @MinFollowing
+        COUNT(DISTINCT f.Follower_id) >= @MinFollowers
+        AND AVG(c.Rating)              >= @MinAvgRating
     ORDER BY
-        FollowerCount DESC,
-        FollowingCount DESC;
+        AvgCourseRating   DESC,
+        FollowerCount     DESC;
 END;
 GO
 
-EXEC GetUserNetworkStats;
+select * from has_role
+select * from role
+select distinct user_id from Offer
+EXEC sp_GetInstructorStats
+     @MinFollowers = 0,
+     @MinAvgRating = 0.0;
 GO
 
-EXEC GetUserNetworkStats
+EXEC sp_GetInstructorStats
      @MinFollowers = 2,
-     @MinFollowing = 0;
+     @MinAvgRating = 0.0;
 GO
 
 -- 2.4
@@ -2134,7 +2360,7 @@ RETURNS @Result TABLE
 AS
 BEGIN
 	-- ktra id đúng format chưa
-    IF @user_id <= 0 --OR LEN(CAST(@user_id AS VARCHAR)) != 8
+    IF @user_id <= 0 
         RETURN;
 
     DECLARE @course_id INT;
@@ -2153,7 +2379,8 @@ BEGIN
 
 		SELECT @total = COUNT(*)
 		FROM (SELECT DISTINCT Chapter_id, Lesson_id as total
-					FROM Learn
+					--FROM Learn
+					FROM Lesson
 					WHERE course_id = @course_id) as SUB;
 
 		SELECT @done = COUNT(*)
@@ -2180,9 +2407,15 @@ BEGIN
     RETURN;
 END;
 
+
 GO
 SELECT * FROM Learn
-SELECT * FROM getComplete(1,0.0);
+select * from lesson
+--test 1: xét người dùng id 1, hoàn thành tối thiểu 0%, kết quả hình 2.4.3
+SELECT * FROM getComplete(1, 0.0);
+--test 2: xét người dùng id 1, hoàn thành tối thiểu 10%, kết quả hình 2.4.4
+SELECT * FROM getComplete(1, 0.1);
+
 
 GO 
 -- Function 2
@@ -2244,8 +2477,11 @@ SELECT * FROM has_course
 SELECT * FROM trendCourseSubject('2025-04-01', 100, NULL); --yyyy/mm/dd
 SELECT * FROM trendCourseSubject('2024-04-01', 100, NULL); --yyyy/mm/dd
 
-SELECT * FROM trendCourseSubject(null, 100, NULL);
-SELECT * FROM trendCourseSubject('2024-04-01', 10, 'Mathematics');
+--test 1: xét toàn bộ chủ đề, kết quả hình 2.4.5
+SELECT * FROM trendCourseSubject('2024-04-01', 5, NULL);
+--test 2: xét chỉ trên chủ đề ‘Machine Learning’, kết quả hình 2.4.6
+SELECT * FROM trendCourseSubject('2024-04-01', 5, 'Machine Learning'); 
+
 
 
 
